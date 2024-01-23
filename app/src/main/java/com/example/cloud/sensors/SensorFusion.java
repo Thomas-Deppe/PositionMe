@@ -182,6 +182,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.angularVelocity = new float[3];
         this.orientation = new float[3];
         this.rotation = new float[4];
+        this.rotation[3] = 1.0f;
         this.R = new float[9];
         // If the gyro needs to be initialised
         this.initState = true;
@@ -941,10 +942,10 @@ public class SensorFusion implements SensorEventListener, Observer {
                     .setGyrY(angularVelocity[1])
                     .setGyrZ(angularVelocity[2])
                     .setGyrZ(angularVelocity[2])
-                    .setRotationVectorW(rotation[0])
-                    .setRotationVectorX(rotation[1])
-                    .setRotationVectorY(rotation[2])
-                    .setRotationVectorZ(rotation[3])
+                    .setRotationVectorX(rotation[0])
+                    .setRotationVectorY(rotation[1])
+                    .setRotationVectorZ(rotation[2])
+                    .setRotationVectorW(rotation[3])
                     .setStepCount(stepCounter))
                     .addPositionData(Traj.Position_Sample.newBuilder()
                             .setMagX(magneticField[0])
@@ -956,13 +957,15 @@ public class SensorFusion implements SensorEventListener, Observer {
             if (counter == 99) {
                 counter = 0;
                 // Store pressure and light data
-                trajectory.addPressureData(Traj.Pressure_Sample.newBuilder()
-                        .setPressure(pressure)
-                        .setRelativeTimestamp(android.os.SystemClock.uptimeMillis()-bootTime))
-                        .addLightData(Traj.Light_Sample.newBuilder()
-                                .setLight(light)
-                                .setRelativeTimestamp(android.os.SystemClock.uptimeMillis()-bootTime)
-                                .build());
+                if (barometerSensor != null) {
+                    trajectory.addPressureData(Traj.Pressure_Sample.newBuilder()
+                                    .setPressure(pressure)
+                                    .setRelativeTimestamp(android.os.SystemClock.uptimeMillis() - bootTime))
+                            .addLightData(Traj.Light_Sample.newBuilder()
+                                    .setLight(light)
+                                    .setRelativeTimestamp(android.os.SystemClock.uptimeMillis() - bootTime)
+                                    .build());
+                }
 
                 // Divide the timer for storing AP data every 5 seconds
                 if (secondCounter == 4) {
