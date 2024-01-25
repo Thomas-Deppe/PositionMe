@@ -60,8 +60,8 @@ public class ServerCommunications implements Observable {
     private List<Observer> observers;
 
     // Static constants necessary for communications
-    private static final String userKey = "ADD_USER_KEY_HERE";
-    private static final String masterKey = "ADD_MASTER_KEY_HERE";
+    private static final String userKey = BuildConfig.OPENPOSITIONING_API_KEY;
+    private static final String masterKey = BuildConfig.OPENPOSITIONING_MASTER_KEY;
     private static final String uploadURL =
             "https://openpositioning.org/api/live/trajectory/upload/" + userKey
                     + "/?key=" + masterKey;
