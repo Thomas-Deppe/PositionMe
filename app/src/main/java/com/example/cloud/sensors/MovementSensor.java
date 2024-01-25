@@ -42,15 +42,27 @@ public class MovementSensor {
         this.sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         this.sensor = sensorManager.getDefaultSensor(sensorType);
 
-        this.sensorInfo = new SensorInfo(
-                sensor.getName(),
-                sensor.getVendor(),
-                sensor.getResolution(),
-                sensor.getPower(),
-                sensor.getVersion(),
-                sensor.getType()
-        );
-        System.err.println(sensorInfo);
+        if (sensor != null) {
+            this.sensorInfo = new SensorInfo(
+                    sensor.getName(),
+                    sensor.getVendor(),
+                    sensor.getResolution(),
+                    sensor.getPower(),
+                    sensor.getVersion(),
+                    sensor.getType()
+            );
+            System.err.println(sensorInfo);
+        } else {
+            this.sensorInfo = new SensorInfo(
+                    "Not available",
+                    "-",
+                    -1.0f,
+                    0.0f,
+                    0,
+                    0
+            );
+
+        }
     }
 
 }
