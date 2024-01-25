@@ -957,7 +957,7 @@ public class SensorFusion implements SensorEventListener, Observer {
             if (counter == 99) {
                 counter = 0;
                 // Store pressure and light data
-                if (barometerSensor != null) {
+                if (barometerSensor.sensor != null) {
                     trajectory.addPressureData(Traj.Pressure_Sample.newBuilder()
                                     .setPressure(pressure)
                                     .setRelativeTimestamp(android.os.SystemClock.uptimeMillis() - bootTime))
