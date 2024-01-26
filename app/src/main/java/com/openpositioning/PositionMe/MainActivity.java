@@ -445,7 +445,7 @@ public class MainActivity extends AppCompatActivity implements Observer {
                         finishAffinity();
                     }
                 })
-                .setIcon(R.mipmap.ic_launcher_foreground)
+                .setIcon(R.mipmap.ic_launcher_simple)
                 .show();
     }
 
@@ -472,7 +472,7 @@ public class MainActivity extends AppCompatActivity implements Observer {
                         startActivityForResult(intent, 1000);
                     }
                 })
-                .setIcon(R.mipmap.ic_launcher_foreground)
+                .setIcon(R.mipmap.ic_launcher_simple)
                 .create();
         alertDialog.show();
     }
