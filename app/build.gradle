@@ -9,7 +9,7 @@ android {
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.example.cloud"
+        applicationId "com.openpositioning.PositionMe"
         minSdk 28
         targetSdk 33
         versionCode 1
