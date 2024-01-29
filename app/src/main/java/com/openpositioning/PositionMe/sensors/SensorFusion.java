@@ -56,10 +56,6 @@ public class SensorFusion implements SensorEventListener, Observer {
     private static final SensorFusion sensorFusion = new SensorFusion();
     // Static constant for calculations with milliseconds
     private static final long TIME_CONST = 10;
-    // Threshold value used for deciding whether rotation vector should be normalized
-    public static final float EPSILON = 0.000000001f;
-    // Static constant used for converting between nanoseconds and seconds
-    private static final float NS2S = 1.0f / 1000000000.0f;
     // Coefficient for fusing gyro-based and magnetometer-based orientation
     public static final float FILTER_COEFFICIENT = 0.96f;
     //Tuning value for low pass filter
@@ -140,20 +136,6 @@ public class SensorFusion implements SensorEventListener, Observer {
     // Trajectory displaying class
     private PathView pathView;
 
-    // Orientation variables
-    private boolean initState;
-    // angular speeds from gyro
-    private float[] gyro;
-    // store time of sampling the gyroscope
-    private float timestamp;
-    // rotation matrix from gyro data
-    private float[] gyroMatrix;
-    // orientation angles from gyro matrix
-    private float[] gyroOrientation;
-    // orientation angles from accel and magnet
-    private float[] accMagOrientation;
-    //endregion
-
     //region Initialisation
     /**
      * Private constructor for implementing singleton design pattern for SensorFusion.
@@ -184,13 +166,6 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.rotation = new float[4];
         this.rotation[3] = 1.0f;
         this.R = new float[9];
-        // If the gyro needs to be initialised
-        this.initState = true;
-        // Gyro orientation arrays
-        this.gyro = new float[3];
-        this.gyroMatrix = new float[9];
-        this.gyroOrientation = new float[3];
-        this.accMagOrientation = new float[3];
         // GNSS initial Long-Lat array
         this.startLocation = new float[2];
     }
@@ -300,7 +275,6 @@ public class SensorFusion implements SensorEventListener, Observer {
                 angularVelocity[0] = sensorEvent.values[0];
                 angularVelocity[1] = sensorEvent.values[1];
                 angularVelocity[2] = sensorEvent.values[2];
-                gyroFunction(sensorEvent);
                 break;
 
 
@@ -321,7 +295,6 @@ public class SensorFusion implements SensorEventListener, Observer {
                 gravity[0] = sensorEvent.values[0];
                 gravity[1] = sensorEvent.values[1];
                 gravity[2] = sensorEvent.values[2];
-                calculateOrientation();
                 elevator = pdrProcessing.estimateElevator(gravity, filteredAcc);
                 break;
 
@@ -338,12 +311,14 @@ public class SensorFusion implements SensorEventListener, Observer {
                 magneticField[0] = sensorEvent.values[0];
                 magneticField[1] = sensorEvent.values[1];
                 magneticField[2] = sensorEvent.values[2];
-                calculateOrientation();
                 break;
 
             case Sensor.TYPE_ROTATION_VECTOR:
                 // Save values
                 this.rotation = sensorEvent.values.clone();
+                float[] rotationVectorDCM = new float[9];
+                SensorManager.getRotationMatrixFromVector(rotationVectorDCM,this.rotation);
+                SensorManager.getOrientation(rotationVectorDCM, this.orientation);
                 break;
 
             case Sensor.TYPE_STEP_DETECTOR:
@@ -419,112 +394,6 @@ public class SensorFusion implements SensorEventListener, Observer {
             }
             this.trajectory.addWifiData(wifiData);
         }
-    }
-
-    /**
-     * Calculate orientation based on the data from accelerometer and magnetic field sensor.
-     *
-     * Uses values in local variables saved from {@link SensorFusion#onSensorChanged(SensorEvent)}
-     */
-    private void calculateOrientation() {
-        //Calculate magnetometer-based orientation
-        SensorManager.getRotationMatrix(R,null, gravity, magneticField);
-        SensorManager.getOrientation(R, this.accMagOrientation);
-    }
-
-    /**
-     * Method for for calculating a delta rotation vector from gyroscope data, the device's
-     * orientation and time. The method first calculates the angular speed of a sample based on
-     * gyro data and normalizes it. It then calculates a delta rotation by integrating with the
-     * angular speed by the time-step. This is then converted into delta rotation vector.
-     *
-     * @param gyroValues            Values measured by gyroscope sensor.
-     * @param deltaRotationVector   Delta rotation vector calculated by this method.
-     * @param timeFactor            Time-step between samples.
-     */
-    private void getRotationVectorFromGyro(float[] gyroValues,
-                                           float[] deltaRotationVector,
-                                           float timeFactor)
-    {
-        float[] normValues = new float[3];
-
-        // Calculate the angular speed of the sample
-        float omegaMagnitude =
-                (float)Math.sqrt(gyroValues[0] * gyroValues[0] +
-                        gyroValues[1] * gyroValues[1] +
-                        gyroValues[2] * gyroValues[2]);
-
-        // Normalize the rotation vector if it's big enough to get the axis
-        if(omegaMagnitude > EPSILON) {
-            normValues[0] = gyroValues[0] / omegaMagnitude;
-            normValues[1] = gyroValues[1] / omegaMagnitude;
-            normValues[2] = gyroValues[2] / omegaMagnitude;
-        }
-
-        // Integrate around this axis with the angular speed by the time-step
-        // in order to get a delta rotation from this sample over the time-step
-        // We will convert this axis-angle representation of the delta rotation
-        // into a quaternion before turning it into the rotation matrix.
-        float thetaOverTwo = omegaMagnitude * timeFactor;
-        float sinThetaOverTwo = (float)Math.sin(thetaOverTwo);
-        float cosThetaOverTwo = (float)Math.cos(thetaOverTwo);
-        deltaRotationVector[0] = sinThetaOverTwo * normValues[0];
-        deltaRotationVector[1] = sinThetaOverTwo * normValues[1];
-        deltaRotationVector[2] = sinThetaOverTwo * normValues[2];
-        deltaRotationVector[3] = cosThetaOverTwo;
-    }
-
-    /**
-     * Method used for updating the gyro-based rotation matrix and orientation.
-     * The method converts raw gyroscope data into a rotation vector. It then converts the rotation
-     * vector into a matrix and applies the new rotation interval/change on the rotation matrix.
-     * This is used to obtain the gyroscope-based orientation.
-     *
-     * @param event     Gyroscope sensor event.
-     */
-    public void gyroFunction(SensorEvent event) {
-        // Don't start until first accelerometer/magnetometer orientation has been acquired.
-        if (gravity == null || magneticField == null)
-            return;
-
-        // Initialisation of the gyroscope based rotation matrix.
-        if(initState) {
-            // initialise gyro orientation to 0s and gyro matrix with identity matrix
-            gyroOrientation[0] = 0.0f;
-            gyroOrientation[1] = 0.0f;
-            gyroOrientation[2] = 0.0f;
-            gyroMatrix[0] = 1.0f; gyroMatrix[1] = 0.0f; gyroMatrix[2] = 0.0f;
-            gyroMatrix[3] = 0.0f; gyroMatrix[4] = 1.0f; gyroMatrix[5] = 0.0f;
-            gyroMatrix[6] = 0.0f; gyroMatrix[7] = 0.0f; gyroMatrix[8] = 1.0f;
-            float[] initMatrix = new float[9];
-            initMatrix = getRotationMatrixFromOrientation(accMagOrientation);
-            float[] test = new float[3];
-            SensorManager.getOrientation(initMatrix, test);
-            gyroMatrix = matrixMultiplication(gyroMatrix, initMatrix);
-            initState = false;
-        }
-
-        // Copy the new gyro values into the gyro array
-        // convert the raw gyro data into a rotation vector.
-        float[] deltaVector = new float[4];
-        if(timestamp != 0) {
-            final float dT = (event.timestamp - timestamp) * NS2S;
-            System.arraycopy(event.values, 0, gyro, 0, 3);
-            getRotationVectorFromGyro(gyro, deltaVector, dT / 2.0f);
-        }
-
-        // Measurement done, save current time for next interval.
-        timestamp = event.timestamp;
-
-        // Convert rotation vector into rotation matrix.
-        float[] deltaMatrix = new float[9];
-        SensorManager.getRotationMatrixFromVector(deltaMatrix, deltaVector);
-
-        // Apply the new rotation interval on the gyroscope based rotation matrix.
-        gyroMatrix = matrixMultiplication(gyroMatrix, deltaMatrix);
-
-        // Get the gyroscope based orientation from the rotation matrix.
-        SensorManager.getOrientation(gyroMatrix, gyroOrientation);
     }
 
     /**
@@ -912,26 +781,6 @@ public class SensorFusion implements SensorEventListener, Observer {
      */
     private class storeDataInTrajectory extends TimerTask {
         public void run() {
-            // Calculate orientation based on magnetometer-based and gyro-based orientation
-            float oneMinusCoeff = 1.0f - filter_coefficient;
-            // Value is only filtered between -3 and 3 radians to avoid the orientation going
-            // back and forth.
-            if (accMagOrientation[0] < 3 && accMagOrientation[0] > -3){
-                orientation[0] = filter_coefficient * gyroOrientation[0]
-                        + oneMinusCoeff * accMagOrientation[0];
-
-            } else {
-                orientation[0] = accMagOrientation[0];
-            }
-            orientation[1] = filter_coefficient * gyroOrientation[1]
-                    + oneMinusCoeff * accMagOrientation[1];
-            orientation[2] = filter_coefficient * gyroOrientation[2]
-                    + oneMinusCoeff * accMagOrientation[2];
-            // overwrite gyro matrix and orientation with fused orientation to compensate for gyro
-            // drift
-            gyroMatrix = getRotationMatrixFromOrientation(orientation);
-            System.arraycopy(orientation, 0, gyroOrientation, 0, 3);
-
             // Store IMU and magnetometer data in Trajectory class
             trajectory.addImuData(Traj.Motion_Sample.newBuilder()
                     .setRelativeTimestamp(android.os.SystemClock.uptimeMillis()-bootTime)
