@@ -122,6 +122,12 @@ public class MainActivity extends AppCompatActivity implements Observer {
                 ActivityCompat.checkSelfPermission(this,
                     Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
                 ActivityCompat.checkSelfPermission(this,
+                        Manifest.permission.READ_MEDIA_VIDEO) != PackageManager.PERMISSION_GRANTED ||
+                ActivityCompat.checkSelfPermission(this,
+                        Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED ||
+                ActivityCompat.checkSelfPermission(this,
+                        Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED ||
+                ActivityCompat.checkSelfPermission(this,
                         Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED){
             askLocationPermissions();
         }
@@ -269,23 +275,49 @@ public class MainActivity extends AppCompatActivity implements Observer {
      */
     private void askStoragePermission() {
         // Check for storage permission
-        int writeStoragePermission = ActivityCompat.checkSelfPermission(this,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        int readStoragePermission = ActivityCompat.checkSelfPermission(this,
-                Manifest.permission.READ_EXTERNAL_STORAGE);
-        // Request if not present
-        if(writeStoragePermission != PackageManager.PERMISSION_GRANTED ||
-                readStoragePermission != PackageManager.PERMISSION_GRANTED) {
-            this.requestPermissions(
-                    new String[]{
-                            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                            Manifest.permission.READ_EXTERNAL_STORAGE},
-                    REQUEST_ID_READ_WRITE_PERMISSION
-            );
-        }
-        else {
-            // Check other permissions if present
-            askMotionPermissions();
+
+        if(Build.VERSION.SDK_INT >= 33) {
+            int videoPermission = ActivityCompat.checkSelfPermission(this,
+                    Manifest.permission.READ_MEDIA_VIDEO);
+            int imagesPermission = ActivityCompat.checkSelfPermission(this,
+                    Manifest.permission.READ_MEDIA_IMAGES);
+            int audioPermission = ActivityCompat.checkSelfPermission(this,
+                    Manifest.permission.READ_MEDIA_AUDIO);
+
+            if(videoPermission != PackageManager.PERMISSION_GRANTED ||
+                    imagesPermission != PackageManager.PERMISSION_GRANTED ||
+                    audioPermission != PackageManager.PERMISSION_GRANTED) {
+                this.requestPermissions(
+                        new String[]{
+                                Manifest.permission.READ_MEDIA_VIDEO,
+                                Manifest.permission.READ_MEDIA_IMAGES,
+                                Manifest.permission.READ_MEDIA_AUDIO},
+                        REQUEST_ID_READ_WRITE_PERMISSION
+                );
+            }
+            else {
+                // Check other permissions if present
+                askMotionPermissions();
+            }
+        } else {
+            int writeStoragePermission = ActivityCompat.checkSelfPermission(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            int readStoragePermission = ActivityCompat.checkSelfPermission(this,
+                    Manifest.permission.READ_EXTERNAL_STORAGE);
+            // Request if not present
+            if(writeStoragePermission != PackageManager.PERMISSION_GRANTED ||
+                    readStoragePermission != PackageManager.PERMISSION_GRANTED) {
+                this.requestPermissions(
+                        new String[]{
+                                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                                Manifest.permission.READ_EXTERNAL_STORAGE},
+                        REQUEST_ID_READ_WRITE_PERMISSION
+                );
+            }
+            else {
+                // Check other permissions if present
+                askMotionPermissions();
+            }
         }
     }
 
@@ -351,6 +383,7 @@ public class MainActivity extends AppCompatActivity implements Observer {
                 }
                 else {
                     if(!settings.getBoolean("permanentDeny", false)) {
+                        Toast.makeText(this, "Location permissions denied FIRST!", Toast.LENGTH_SHORT).show();
                         permissionsDeniedFirst();
                     }
                     else permissionsDeniedPermanent();
@@ -372,6 +405,7 @@ public class MainActivity extends AppCompatActivity implements Observer {
                 }
                 else {
                     if(!settings.getBoolean("permanentDeny", false)) {
+                        Toast.makeText(this, "Wifi permissions denied FIRST!", Toast.LENGTH_SHORT).show();
                         permissionsDeniedFirst();
                     }
                     else permissionsDeniedPermanent();
@@ -383,14 +417,21 @@ public class MainActivity extends AppCompatActivity implements Observer {
             }
             case REQUEST_ID_READ_WRITE_PERMISSION: { // Read write permissions
                 // If request is cancelled results are empty
-                if (grantResults.length > 1 &&
+                if (Build.VERSION.SDK_INT >= 33 && (grantResults.length > 1 &&
                         grantResults[0] == PackageManager.PERMISSION_GRANTED &&
-                        grantResults[1] == PackageManager.PERMISSION_GRANTED) {
+                        grantResults[1] == PackageManager.PERMISSION_GRANTED &&
+                        grantResults[2] == PackageManager.PERMISSION_GRANTED)) {
+                    Toast.makeText(this, "Permissions granted!", Toast.LENGTH_SHORT).show();
+                    askMotionPermissions();
+                } else if (Build.VERSION.SDK_INT < 33 && (grantResults.length > 1 &&
+                        grantResults[0] == PackageManager.PERMISSION_GRANTED &&
+                        grantResults[1] == PackageManager.PERMISSION_GRANTED)) {
                     Toast.makeText(this, "Permissions granted!", Toast.LENGTH_SHORT).show();
                     askMotionPermissions();
                 }
                 else {
                     if(!settings.getBoolean("permanentDeny", false)) {
+                        Toast.makeText(this, "Storage permissions denied FIRST!", Toast.LENGTH_SHORT).show();
                         permissionsDeniedFirst();
                     }
                     else permissionsDeniedPermanent();
@@ -407,6 +448,7 @@ public class MainActivity extends AppCompatActivity implements Observer {
                 }
                 else {
                     if(!settings.getBoolean("permanentDeny", false)) {
+                        Toast.makeText(this, "Activity permissions denied FIRST!", Toast.LENGTH_SHORT).show();
                         permissionsDeniedFirst();
                     }
                     else permissionsDeniedPermanent();
