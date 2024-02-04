@@ -117,18 +117,21 @@ public class MainActivity extends AppCompatActivity implements Observer {
                     Manifest.permission.CHANGE_WIFI_STATE) != PackageManager.PERMISSION_GRANTED ||
                 ActivityCompat.checkSelfPermission(this,
                     Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED ||
-                ActivityCompat.checkSelfPermission(this,
-                    Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
-                ActivityCompat.checkSelfPermission(this,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
-                ActivityCompat.checkSelfPermission(this,
-                        Manifest.permission.READ_MEDIA_VIDEO) != PackageManager.PERMISSION_GRANTED ||
-                ActivityCompat.checkSelfPermission(this,
-                        Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED ||
-                ActivityCompat.checkSelfPermission(this,
-                        Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED ||
+                (Build.VERSION.SDK_INT < 33 &&
+                        (ActivityCompat.checkSelfPermission(this,
+                                Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
+                                ActivityCompat.checkSelfPermission(this,
+                                        Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)) ||
+                (Build.VERSION.SDK_INT >= 33 &&
+                        (ActivityCompat.checkSelfPermission(this,
+                                Manifest.permission.READ_MEDIA_VIDEO) != PackageManager.PERMISSION_GRANTED ||
+                                ActivityCompat.checkSelfPermission(this,
+                                        Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED ||
+                                ActivityCompat.checkSelfPermission(this,
+                                        Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED)) ||
                 ActivityCompat.checkSelfPermission(this,
                         Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED){
+
             askLocationPermissions();
         }
         // Handler for global toasts and popups from other classes
