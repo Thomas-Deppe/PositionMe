@@ -386,7 +386,6 @@ public class MainActivity extends AppCompatActivity implements Observer {
                 }
                 else {
                     if(!settings.getBoolean("permanentDeny", false)) {
-                        Toast.makeText(this, "Location permissions denied FIRST!", Toast.LENGTH_SHORT).show();
                         permissionsDeniedFirst();
                     }
                     else permissionsDeniedPermanent();
@@ -408,7 +407,6 @@ public class MainActivity extends AppCompatActivity implements Observer {
                 }
                 else {
                     if(!settings.getBoolean("permanentDeny", false)) {
-                        Toast.makeText(this, "Wifi permissions denied FIRST!", Toast.LENGTH_SHORT).show();
                         permissionsDeniedFirst();
                     }
                     else permissionsDeniedPermanent();
@@ -434,7 +432,6 @@ public class MainActivity extends AppCompatActivity implements Observer {
                 }
                 else {
                     if(!settings.getBoolean("permanentDeny", false)) {
-                        Toast.makeText(this, "Storage permissions denied FIRST!", Toast.LENGTH_SHORT).show();
                         permissionsDeniedFirst();
                     }
                     else permissionsDeniedPermanent();
@@ -451,7 +448,6 @@ public class MainActivity extends AppCompatActivity implements Observer {
                 }
                 else {
                     if(!settings.getBoolean("permanentDeny", false)) {
-                        Toast.makeText(this, "Activity permissions denied FIRST!", Toast.LENGTH_SHORT).show();
                         permissionsDeniedFirst();
                     }
                     else permissionsDeniedPermanent();
