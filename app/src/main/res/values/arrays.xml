@@ -32,4 +32,31 @@
         <item>cell</item>
         <item>wifi</item>
     </string-array>
+
+    <string-array name="map_type_options">
+        <item>Normal</item>
+        <item>Satellite</item>
+        <item>Terrain</item>
+        <item>Hybrid</item>
+    </string-array>
+
+    <string-array name="floors_nucleus">
+        <item>Lower_Ground</item>
+        <item>Ground</item>
+        <item>First</item>
+        <item>Second</item>
+        <item>Third</item>
+    </string-array>
+
+    <string-array name="floors_library">
+        <item>Ground</item>
+        <item>First</item>
+        <item>Second</item>
+        <item>Third</item>
+    </string-array>
+
+    <string-array name="floors_fleming">
+        <item>Ground</item>
+        <item>First</item>
+    </string-array>
 </resources>

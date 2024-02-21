@@ -3,6 +3,7 @@ package com.openpositioning.PositionMe;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.hardware.SensorManager;
+import android.util.Log;
 
 import androidx.preference.PreferenceManager;
 
@@ -35,6 +36,8 @@ public class PdrProcessing {
     private static final float movementThreshold = 0.3f; // m/s^2
     // Threshold under which movement is considered non-existent
     private static final float epsilon = 0.18f;
+
+    private static final int groundFloorElevation = 75;
     //endregion
 
     //region Instance variables
@@ -47,16 +50,18 @@ public class PdrProcessing {
     private boolean useManualStep;
 
     // Current 2D position coordinates
-    private float positionX;
-    private float positionY;
+    private double positionX;
+    private double positionY;
 
     // Vertical movement calculation
     private Float[] startElevationBuffer;
     private float startElevation;
     private int setupIndex = 0;
     private float elevation;
+    private float previousElevation;
     private int floorHeight;
     private int currentFloor;
+    private int floorScaling;
 
     // Buffer of most recent elevations calculated
     private CircularFloatBuffer elevationList;
@@ -81,6 +86,7 @@ public class PdrProcessing {
         this.settings = PreferenceManager.getDefaultSharedPreferences(context);
         // Check if estimate or manual values should be used
         this.useManualStep = this.settings.getBoolean("manual_step_values", false);
+        Log.d("USE MANUAL STEP", "manualStep: "+useManualStep);
         if(useManualStep) {
             try {
                 // Retrieve manual step  length
@@ -125,6 +131,7 @@ public class PdrProcessing {
         this.startElevationBuffer = new Float[3];
         // Start floor - assumed to be zero
         this.currentFloor = 0;
+        this.floorScaling = 1;
     }
 
     /**
@@ -146,6 +153,7 @@ public class PdrProcessing {
             //ArrayList<Double> accelMagnitudeFiltered = filter(accelMagnitudeOvertime);
             // Estimate stride
             this.stepLength = weibergMinMax(accelMagnitudeOvertime);
+            Log.d("STRIDE_LENGTH", "StrideLength "+stepLength);
             // System.err.println("Step Length" + stepLength);
         }
 
@@ -154,15 +162,15 @@ public class PdrProcessing {
         stepCount++;
 
         // Translate to cartesian coordinate system
-        float x = (float) (stepLength * Math.cos(adaptedHeading));
-        float y = (float) (stepLength * Math.sin(adaptedHeading));
+        double x = (stepLength * Math.cos(adaptedHeading));
+        double y = (stepLength * Math.sin(adaptedHeading));
 
         // Update position values
         this.positionX += x;
         this.positionY += y;
 
         // return current position
-        return new float[]{this.positionX, this.positionY};
+        return new float[]{(float)this.positionX, (float)this.positionY};
     }
 
     /**
@@ -183,6 +191,8 @@ public class PdrProcessing {
             if(setupIndex == 2) {
                 Arrays.sort(startElevationBuffer);
                 startElevation = startElevationBuffer[1];
+                previousElevation = 0;
+                //this.currentFloor = (int) (startElevation-groundFloorElevation)/this.floorHeight;
             }
             this.setupIndex++;
         }
@@ -199,11 +209,30 @@ public class PdrProcessing {
                 List<Float> elevationMemory = this.elevationList.getListCopy();
                 OptionalDouble currentAvg = elevationMemory.stream().mapToDouble(f -> f).average();
                 float finishAvg = currentAvg.isPresent() ? (float) currentAvg.getAsDouble() : 0;
-
+                Log.d("CHECK_FLOOR_MOVEMENT", "start: "+startElevation + " calc: "+(finishAvg - startElevation)+" floorHeight: "+floorHeight + "prev: "+previousElevation);
                 // Check if we moved floor by comparing with start position
-                if(Math.abs(finishAvg - startElevation) > this.floorHeight) {
+
+                if(Math.abs((finishAvg-startElevation) - (previousElevation)) > this.floorHeight) {
                     // Change floors - 'floor' division
-                    this.currentFloor += (finishAvg - startElevation)/this.floorHeight;
+                    int check = (int) (finishAvg - startElevation)/this.floorHeight;
+                    Log.d("CHECK", "check "+check);
+                    if ( check == 0){
+                        Log.d("CHECK", "Inisde Check");
+                        if ((finishAvg-startElevation) < previousElevation){
+                            Log.d("CHECK", "Subtract Floor");
+                            this.currentFloor -= 1;
+                        } else {
+                            Log.d("CHECK", "ADD Floor");
+                            this.currentFloor += 1;
+                        }
+                    } else {
+                        Log.d("CHECK", "Inisde Other");
+
+                        //this.currentFloor += (finishAvg - startElevation)/this.floorHeight;
+                        this.currentFloor += check;
+                    }
+                    previousElevation = (finishAvg - startElevation);
+                    Log.d("CHECK_FLOOR_MOVEMENT", "currentFloor: "+currentFloor);
                 }
             }
             // Return current elevation
@@ -236,7 +265,19 @@ public class PdrProcessing {
      * @return  float array of size 2, with the X and Y coordinates respectively.
      */
     public float[] getPDRMovement() {
-        float [] pdrPosition= new float[] {positionX,positionY};
+        float [] pdrPosition= new float[] {(float)positionX,(float)positionY};
+        return pdrPosition;
+
+    }
+
+    /**
+     * Get the current X and Y coordinates from the PDR processing class.
+     * The coordinates are in meters, the start of the recording is the (0,0)
+     *
+     * @return  double array of size 2, with the X and Y coordinates respectively.
+     */
+    public double[] getAccPDRMovement() {
+        double [] pdrPosition= new double[] {positionX,positionY};
         return pdrPosition;
 
     }
@@ -258,6 +299,8 @@ public class PdrProcessing {
     public int getCurrentFloor() {
         return this.currentFloor;
     }
+
+    public void setCurrentFloor(int updatedFloor) { this.currentFloor = updatedFloor; }
 
     /**
      * Estimates if the user is currently taking an elevator.
@@ -363,6 +406,7 @@ public class PdrProcessing {
         this.startElevationBuffer = new Float[3];
         // Start floor - assumed to be zero
         this.currentFloor = 0;
+        this.previousElevation = 0;
     }
 
     /**

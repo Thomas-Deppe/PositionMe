@@ -10,12 +10,14 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.os.Build;
 import android.os.PowerManager;
+import android.util.Log;
 
 import androidx.preference.PreferenceManager;
 
 import com.openpositioning.PositionMe.MainActivity;
 import com.openpositioning.PositionMe.PathView;
 import com.openpositioning.PositionMe.PdrProcessing;
+import com.openpositioning.PositionMe.SensorFusionUpdates;
 import com.openpositioning.PositionMe.ServerCommunications;
 import com.openpositioning.PositionMe.Traj;
 
@@ -120,9 +122,12 @@ public class SensorFusion implements SensorEventListener, Observer {
     private float elevation;
     private boolean elevator;
     // Location values
-    private float latitude;
-    private float longitude;
+    private double latitude;
+    private double longitude;
+    private double altitude;
+    private float GNSS_accuracy;
     private float[] startLocation;
+    private double[] startRef;
     // Wifi values
     private List<Wifi> wifiList;
 
@@ -135,6 +140,8 @@ public class SensorFusion implements SensorEventListener, Observer {
 
     // Trajectory displaying class
     private PathView pathView;
+
+    private List<SensorFusionUpdates> recordingUpdates;
 
     //region Initialisation
     /**
@@ -168,6 +175,9 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.R = new float[9];
         // GNSS initial Long-Lat array
         this.startLocation = new float[2];
+        this.startRef = new double[3];
+
+        this.recordingUpdates = new ArrayList<>();
     }
 
 
@@ -319,12 +329,15 @@ public class SensorFusion implements SensorEventListener, Observer {
                 float[] rotationVectorDCM = new float[9];
                 SensorManager.getRotationMatrixFromVector(rotationVectorDCM,this.rotation);
                 SensorManager.getOrientation(rotationVectorDCM, this.orientation);
+                notifySensorUpdate(SensorFusionUpdates.update_type.ORIENTATION_UPDATE);
                 break;
 
             case Sensor.TYPE_STEP_DETECTOR:
                 //Store time of step
                 long stepTime = android.os.SystemClock.uptimeMillis() - bootTime;
                 float[] newCords = this.pdrProcessing.updatePdr(stepTime, this.accelMagnitude, this.orientation[0]);
+                Log.d("CALL_OBSERVER", "Size: "+ recordingUpdates.size() + recordingUpdates.toString());
+                notifySensorUpdate(SensorFusionUpdates.update_type.PDR_UPDATE);
                 if (saveRecording) {
                     // Store the PDR coordinates for plotting the trajectory
                     this.pathView.drawTrajectory(newCords);
@@ -353,21 +366,23 @@ public class SensorFusion implements SensorEventListener, Observer {
         public void onLocationChanged(Location location) {
             if(location != null){
                 //Toast.makeText(context, "Location Changed", Toast.LENGTH_SHORT).show();
-                latitude = (float) location.getLatitude();
-                longitude = (float) location.getLongitude();
-                float altitude = (float) location.getAltitude();
-                float accuracy = (float) location.getAccuracy();
+                Log.d("LOCATION_CHANGED", "location Update");
+                latitude = location.getLatitude();
+                longitude = location.getLongitude();
+                altitude = location.getAltitude();
+                GNSS_accuracy = (float) location.getAccuracy();
                 float speed = (float) location.getSpeed();
                 String provider = location.getProvider();
                 if(saveRecording) {
                     trajectory.addGnssData(Traj.GNSS_Sample.newBuilder()
-                            .setAccuracy(accuracy)
-                            .setAltitude(altitude)
-                            .setLatitude(latitude)
-                            .setLongitude(longitude)
+                            .setAccuracy(GNSS_accuracy)
+                            .setAltitude((float)altitude)
+                            .setLatitude((float)latitude)
+                            .setLongitude((float)longitude)
                             .setSpeed(speed)
                             .setProvider(provider)
                             .setRelativeTimestamp(System.currentTimeMillis()-absoluteStartTime));
+                    notifySensorUpdate(SensorFusionUpdates.update_type.GNSS_UPDATE);
                 }
             }
         }
@@ -467,6 +482,10 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void onAccuracyChanged(Sensor sensor, int i) {}
     //endregion
 
+    public double[] getCurrentPDRCalc(){
+       return pdrProcessing.getAccPDRMovement();
+    }
+
     //region Getters/Setters
     /**
      * Getter function for core location data.
@@ -477,14 +496,35 @@ public class SensorFusion implements SensorEventListener, Observer {
     public float[] getGNSSLatitude(boolean start) {
         float [] latLong = new float[2];
         if(!start) {
-            latLong[0] = latitude;
-            latLong[1] = longitude;
+            latLong[0] = (float) latitude;
+            latLong[1] = (float) longitude;
         }
         else{
             latLong = startLocation;
         }
         return latLong;
     }
+
+    /**
+     * Getter function for core location data.
+     *
+     * @param start set true to get the initial location
+     * @return longitude and latitude data in a float[2].
+     */
+    public double[] getGNSSLatLngAlt(boolean start) {
+        double [] latLongAlt = new double[3];
+        if(!start) {
+            latLongAlt[0] = latitude;
+            latLongAlt[1] = longitude;
+            latLongAlt[2] = altitude;
+        }
+        else{
+            latLongAlt = startRef;
+        }
+        return latLongAlt;
+    }
+
+    public float getGNSSAccuracy(){return GNSS_accuracy;}
 
     /**
      * Setter function for core location data.
@@ -495,6 +535,14 @@ public class SensorFusion implements SensorEventListener, Observer {
         startLocation = startPosition;
     }
 
+    /**
+     * Setter function for core location data.
+     *
+     * @param startPosition contains the initial location set by the user
+     */
+    public void setStartGNSSLatLngAlt(double[] startPosition){
+        startRef = startPosition;
+    }
 
     /**
      * Function to redraw path in corrections fragment.
@@ -573,6 +621,30 @@ public class SensorFusion implements SensorEventListener, Observer {
         return sensorInfoList;
     }
 
+    public void registerForSensorUpdates(SensorFusionUpdates observer) {
+        recordingUpdates.add(observer);
+    }
+
+    public void removeSensorUpdate(SensorFusionUpdates observer) {
+        recordingUpdates.remove(observer);
+    }
+
+    public void notifySensorUpdate(SensorFusionUpdates.update_type type){
+        for (SensorFusionUpdates observer : recordingUpdates) {
+            switch (type) {
+                case PDR_UPDATE:
+                    observer.onPDRUpdate();
+                    break;
+                case ORIENTATION_UPDATE:
+                    observer.onOrientationUpdate();
+                    break;
+                case GNSS_UPDATE:
+                    observer.onGNSSUpdate();
+                    break;
+            }
+        }
+    }
+
     /**
      * Registers the caller observer to receive updates from the server instance.
      * Necessary when classes want to act on a trajectory being successfully or unsuccessfully send
@@ -603,6 +675,13 @@ public class SensorFusion implements SensorEventListener, Observer {
      */
     public boolean getElevator() {
         return this.elevator;
+    }
+
+    public int getCurrentFloor(){ return pdrProcessing.getCurrentFloor(); }
+
+    public void setCurrentFloor(int updatedFloor){
+        Log.d("SETTING_CURRENT_FLOOR", "floor update: "+updatedFloor);
+        pdrProcessing.setCurrentFloor(updatedFloor);
     }
 
     /**
@@ -729,6 +808,7 @@ public class SensorFusion implements SensorEventListener, Observer {
      */
     public void stopRecording() {
         // Only cancel if we are running
+        //setCurrentFloor(0);
         if(this.saveRecording) {
             this.saveRecording = false;
             storeTrajectoryTimer.cancel();

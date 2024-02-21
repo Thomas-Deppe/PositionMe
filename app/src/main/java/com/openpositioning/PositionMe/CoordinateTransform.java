@@ -14,11 +14,11 @@ public final class CoordinateTransform {
     private CoordinateTransform(){
     }
 
-    public static double[] geodeticToEcef(LatLng coordinate, double altitude){
+    public static double[] geodeticToEcef(double latitude, double longitude, double altitude){
         double[] ecefCoords = new double[3];
-        Log.d("geodeticToEcef", "lat: "+coordinate.latitude+" long: "+coordinate.longitude+" alt: "+altitude);
-        double latRad = Math.toRadians(coordinate.latitude);
-        double lngRad = Math.toRadians(coordinate.longitude);
+        Log.d("geodeticToEcef", "lat: "+latitude+" long: "+longitude+" alt: "+altitude);
+        double latRad = Math.toRadians(latitude);
+        double lngRad = Math.toRadians(longitude);
         Log.d("geodeticToEcef", "Rad lat: "+latRad+" Rad long: "+lngRad);
 
         //Calculate Prime Vertical Radius of Curvature
@@ -35,11 +35,23 @@ public final class CoordinateTransform {
         return ecefCoords;
     }
 
-    public static double[] enuToEcef(double east, double north, double up, LatLng refPosition, double refAlt){
+    public static double[] enuToEcef(double east, double north, double up, double refLatitude, double refLongitude, double refAlt){
         double[] calCoords = new double[3];
-        double[] ecefRefCoords = geodeticToEcef(refPosition, refAlt);
-        double latRad = Math.toRadians(refPosition.latitude);
-        double lngRad = Math.toRadians(refPosition.longitude);
+        double[] ecefRefCoords = geodeticToEcef(refLatitude, refLongitude, refAlt);
+        double latRad = Math.toRadians(refLatitude);
+        double lngRad = Math.toRadians(refLongitude);
+
+        calCoords[0] = (Math.cos(lngRad) * (Math.cos(latRad)*up - Math.sin(latRad)*north) - Math.sin(lngRad)*east) + ecefRefCoords[0];
+        calCoords[1] = (Math.sin(lngRad)*(Math.cos(latRad)*up - Math.sin(latRad)*north) + Math.cos(lngRad)*east) + ecefRefCoords[1];
+        calCoords[2] = (Math.sin(latRad)*up + Math.cos(latRad)*north) + ecefRefCoords[2];
+
+        return calCoords;
+    }
+
+    public static double[] enuToEcef(double east, double north, double up, double refLatitude, double refLongitude, double[] ecefRefCoords){
+        double[] calCoords = new double[3];
+        double latRad = Math.toRadians(refLatitude);
+        double lngRad = Math.toRadians(refLongitude);
 
         calCoords[0] = (Math.cos(lngRad) * (Math.cos(latRad)*up - Math.sin(latRad)*north) - Math.sin(lngRad)*east) + ecefRefCoords[0];
         calCoords[1] = (Math.sin(lngRad)*(Math.cos(latRad)*up - Math.sin(latRad)*north) + Math.cos(lngRad)*east) + ecefRefCoords[1];
@@ -78,8 +90,15 @@ public final class CoordinateTransform {
         return new LatLng(toDegrees(latitude), toDegrees(longitude));
     }
 
-    public static LatLng enuToGeodetic(double east, double north, double up, LatLng refPosition, double refAlt) {
-        double[] ecefCoords = enuToEcef(east, north, up, refPosition, refAlt);
+    public static LatLng enuToGeodetic(double east, double north, double up, double refLatitude, double refLongitude, double[] ecefRefCoords) {
+        double[] ecefCoords = enuToEcef(east, north, up, refLatitude, refLongitude, ecefRefCoords);
+        Log.d("ECEFCOORDS", "x: "+ecefCoords[0]+" y: "+ecefCoords[1]+" z: "+ecefCoords[2]);
+
+        return ecefToGeodetic(ecefCoords);
+    }
+
+    public static LatLng enuToGeodetic(double east, double north, double up, double refLatitude, double refLongitude, double refAlt) {
+        double[] ecefCoords = enuToEcef(east, north, up, refLatitude, refLongitude, refAlt);
         Log.d("ECEFCOORDS", "x: "+ecefCoords[0]+" y: "+ecefCoords[1]+" z: "+ecefCoords[2]);
 
         return ecefToGeodetic(ecefCoords);

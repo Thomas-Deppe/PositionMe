@@ -43,6 +43,8 @@ public class StartLocationFragment extends Fragment {
     private LatLng position;
     //Start position of the user to be stored
     private float[] startPosition = new float[2];
+
+    private double[] startRef = new double[3];
     //Zoom of google maps
     private float zoom = 19f;
 
@@ -67,6 +69,7 @@ public class StartLocationFragment extends Fragment {
 
         //Obtain the start position from the GPS data from the SensorFusion class
         startPosition = sensorFusion.getGNSSLatitude(false);
+        startRef = sensorFusion.getGNSSLatLngAlt(false);
         //If not location found zoom the map out
         if(startPosition[0]==0 && startPosition[1]==0){
             zoom = 1f;
@@ -118,6 +121,8 @@ public class StartLocationFragment extends Fragment {
                     {
                         startPosition[0] = (float) marker.getPosition().latitude;
                         startPosition[1] = (float) marker.getPosition().longitude;
+                        startRef[0] = marker.getPosition().latitude;
+                        startRef[1] = marker.getPosition().longitude;
                     }
 
                     /**
@@ -152,6 +157,7 @@ public class StartLocationFragment extends Fragment {
                 sensorFusion.startRecording();
                 // Set the start location obtained
                 sensorFusion.setStartGNSSLatitude(startPosition);
+                sensorFusion.setStartGNSSLatLngAlt(startRef);
                 // Navigate to the RecordingFragment
                 NavDirections action = StartLocationFragmentDirections.actionStartLocationFragmentToRecordingFragment();
                 Navigation.findNavController(view).navigate(action);
