@@ -61,7 +61,6 @@ public class PdrProcessing {
     private float previousElevation;
     private int floorHeight;
     private int currentFloor;
-    private int floorScaling;
 
     // Buffer of most recent elevations calculated
     private CircularFloatBuffer elevationList;
@@ -131,7 +130,6 @@ public class PdrProcessing {
         this.startElevationBuffer = new Float[3];
         // Start floor - assumed to be zero
         this.currentFloor = 0;
-        this.floorScaling = 1;
     }
 
     /**
@@ -192,7 +190,6 @@ public class PdrProcessing {
                 Arrays.sort(startElevationBuffer);
                 startElevation = startElevationBuffer[1];
                 previousElevation = 0;
-                //this.currentFloor = (int) (startElevation-groundFloorElevation)/this.floorHeight;
             }
             this.setupIndex++;
         }
@@ -209,30 +206,25 @@ public class PdrProcessing {
                 List<Float> elevationMemory = this.elevationList.getListCopy();
                 OptionalDouble currentAvg = elevationMemory.stream().mapToDouble(f -> f).average();
                 float finishAvg = currentAvg.isPresent() ? (float) currentAvg.getAsDouble() : 0;
-                Log.d("CHECK_FLOOR_MOVEMENT", "start: "+startElevation + " calc: "+(finishAvg - startElevation)+" floorHeight: "+floorHeight + "prev: "+previousElevation);
                 // Check if we moved floor by comparing with start position
 
                 if(Math.abs((finishAvg-startElevation) - (previousElevation)) > this.floorHeight) {
                     // Change floors - 'floor' division
                     int check = (int) (finishAvg - startElevation)/this.floorHeight;
-                    Log.d("CHECK", "check "+check);
+                    //Check if user has returned to the starting floor.
                     if ( check == 0){
-                        Log.d("CHECK", "Inisde Check");
                         if ((finishAvg-startElevation) < previousElevation){
-                            Log.d("CHECK", "Subtract Floor");
+                            //if user is descending from starting floor subtract a floor.
                             this.currentFloor -= 1;
                         } else {
-                            Log.d("CHECK", "ADD Floor");
+                            // Else the user is ascending, add a floor
                             this.currentFloor += 1;
                         }
                     } else {
-                        Log.d("CHECK", "Inisde Other");
-
-                        //this.currentFloor += (finishAvg - startElevation)/this.floorHeight;
                         this.currentFloor += check;
                     }
+                    //Update the previous elevation to compare
                     previousElevation = (finishAvg - startElevation);
-                    Log.d("CHECK_FLOOR_MOVEMENT", "currentFloor: "+currentFloor);
                 }
             }
             // Return current elevation
@@ -300,6 +292,10 @@ public class PdrProcessing {
         return this.currentFloor;
     }
 
+    /**
+     * Sets the current floor number if the user selects a new floor.
+     *
+     */
     public void setCurrentFloor(int updatedFloor) { this.currentFloor = updatedFloor; }
 
     /**

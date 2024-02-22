@@ -141,6 +141,7 @@ public class SensorFusion implements SensorEventListener, Observer {
     // Trajectory displaying class
     private PathView pathView;
 
+    //Creates a list of classes which wish to receive asynchronous updates from this class.
     private List<SensorFusionUpdates> recordingUpdates;
 
     //region Initialisation
@@ -336,7 +337,6 @@ public class SensorFusion implements SensorEventListener, Observer {
                 //Store time of step
                 long stepTime = android.os.SystemClock.uptimeMillis() - bootTime;
                 float[] newCords = this.pdrProcessing.updatePdr(stepTime, this.accelMagnitude, this.orientation[0]);
-                Log.d("CALL_OBSERVER", "Size: "+ recordingUpdates.size() + recordingUpdates.toString());
                 notifySensorUpdate(SensorFusionUpdates.update_type.PDR_UPDATE);
                 if (saveRecording) {
                     // Store the PDR coordinates for plotting the trajectory
@@ -482,6 +482,10 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void onAccuracyChanged(Sensor sensor, int i) {}
     //endregion
 
+    /**
+     * A helper function to get the calculated PDR coordinates as doubles for more accurate conversion between coordinates.
+     * @return a double array with teh X and Y PDR coordiantes
+     */
     public double[] getCurrentPDRCalc(){
        return pdrProcessing.getAccPDRMovement();
     }
@@ -506,10 +510,10 @@ public class SensorFusion implements SensorEventListener, Observer {
     }
 
     /**
-     * Getter function for core location data.
+     * Getter function for core location data including altitude.
      *
      * @param start set true to get the initial location
-     * @return longitude and latitude data in a float[2].
+     * @return longitude and latitude data in a float[3].
      */
     public double[] getGNSSLatLngAlt(boolean start) {
         double [] latLongAlt = new double[3];
@@ -524,6 +528,10 @@ public class SensorFusion implements SensorEventListener, Observer {
         return latLongAlt;
     }
 
+    /**
+     * A get method to retrieve the accuracy of the GNSS position
+     * @return the accuracy of the received GNSS position
+     */
     public float getGNSSAccuracy(){return GNSS_accuracy;}
 
     /**
@@ -621,14 +629,27 @@ public class SensorFusion implements SensorEventListener, Observer {
         return sensorInfoList;
     }
 
+    /**
+     * A helper method that allows other classes to register to receive sensor updates from this class.
+     * @param observer The class that wishes to receive updates.
+     */
     public void registerForSensorUpdates(SensorFusionUpdates observer) {
         recordingUpdates.add(observer);
     }
 
+    /**
+     * A helper method that allows other classes to remove itself from receiving sensor updates from this class.
+     * @param observer The class that wishes to not receive updates.
+     */
     public void removeSensorUpdate(SensorFusionUpdates observer) {
         recordingUpdates.remove(observer);
     }
 
+    /**
+     * A helper method used to notify all observers that an update is available.
+     *
+     * @param type The type of update, will determine which callback function to call.
+     */
     public void notifySensorUpdate(SensorFusionUpdates.update_type type){
         for (SensorFusionUpdates observer : recordingUpdates) {
             switch (type) {

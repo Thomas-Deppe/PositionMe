@@ -62,7 +62,8 @@ import java.util.List;
 
 /**
  * A simple {@link Fragment} subclass. The recording fragment is displayed while the app is actively
- * saving data, with some UI elements indicating current PDR status.
+ * saving data, with some UI elements indicating current PDR status. The users path is plotted on the map and a floor plan is displayed on this map if the user enters
+ * a supported building.
  *
  * @see HomeFragment the previous fragment in the nav graph.
  * @see CorrectionFragment the next fragment in the nav graph.
@@ -72,7 +73,9 @@ import java.util.List;
  */
 public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
+    //Stores the map displayed
     private GoogleMap recording_map;
+    //Stores the polyline of the users path so that it can be updated without the need to redraw the entire polyline
     private Polyline user_trajectory;
     //Zoom of google maps
     private float zoom = 19f;
@@ -99,6 +102,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     private TextView floor_title;
     private TextView accuracy;
     private TextView positioning_error;
+    //Settings spinners that allow the user to change
     private Spinner mapTypeSpinner;
     private Spinner floorSpinner;
 
@@ -108,7 +112,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     private SensorFusion sensorFusion;
     //Timer to end recording
     private CountDownTimer autoStop;
-    //?
+    //A polling mechanism used to refresh the screen for updates
     private Handler refreshDataHandler;
 
     //variables to store data of the trajectory
@@ -116,17 +120,20 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     private double previousPosX;
     private double previousPosY;
 
+    //Variables to store the users starting position.
     private double[] startPosition = new double[3];
     private double[] ecefRefCoords = new double[3];
 
+    //Used to manipulate the floor plans displayed and track which building the user is in.
     private BuildingManager buildingManager;
-
+    //The coordinates of the users current position
     private LatLng currentPosition;
-
+    //Stores the markers displaying the users location and GNSS position so they can be manipulated without removing and re-adding them
     private Marker GNSS_marker;
     private Marker user_marker;
-
+    //The users current floor. The user is expected to start on the ground floor.
     private int currentFloor = 0;
+
     /**
      * Public Constructor for the class.
      * Left empty as not required
@@ -139,6 +146,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
      * {@inheritDoc}
      * Gets an instance of the {@link SensorFusion} class, and initialises the context and settings.
      * Creates a handler for periodically updating the displayed data.
+     * It also registers this class as an observer to sensor fusion, so that it is asynchronously notified when new values are calculated
      *
      */
     @Override
@@ -161,6 +169,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
          * If Google Play services is not installed on the device, the user will be prompted to
          * install it inside the SupportMapFragment. This method will only be triggered once the
          * user has installed Google Play services and returned to the app.
+         * It initialises the building manager once the map is ready an plots the users initial location.
          */
         @Override
         public void onMapReady(GoogleMap googleMap) {
@@ -178,11 +187,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             ecefRefCoords = CoordinateTransform.geodeticToEcef(startPosition[0],startPosition[1], startPosition[2]);
             LatLng position = new LatLng(startPosition[0], startPosition[1]);
             //LatLng position = new LatLng(55.922431222785264, -3.1724382435880134);
-            //PinConfig.Builder pinConfigBuilder = PinConfig.builder();
-            //pinConfigBuilder.setGlyph(new PinConfig.Glyph(BitmapDescriptorFactory.fromResource(R.drawable.ic_baseline_directions_walk_24)));
-            //PinConfig pinConfig = pinConfigBuilder.build();
-            //user_marker = googleMap.addMarker(new AdvancedMarkerOptions()
-            //)
             user_marker = recording_map.addMarker(new MarkerOptions()
                     .position(position)
                     .title("User Position"));
@@ -214,6 +218,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
      * Text Views and Icons initialised to display the current PDR to the user. A Button onClick
      * listener is enabled to detect when to go to next fragment and allow the user to correct PDR.
      * A runnable thread is called to update the UI every 0.5 seconds.
+     * A recording settings bottom sheet dialog is created and a button onClick listener is set to determine if this dialog should be displayed.
      */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
@@ -222,6 +227,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         // Set autoStop to null for repeat recordings
         this.autoStop = null;
 
+        //Sets up the map
         SupportMapFragment mapFragment =
                  (SupportMapFragment) getChildFragmentManager().findFragmentById(R.id.recordingMap);
         if (mapFragment != null) {
@@ -248,10 +254,16 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         this.previousPosX = 0f;
         this.previousPosY = 0f;
 
+        //creates the settings dialog
         createRecordingSettingsDialog();
+
 
         this.recordingSettings = getView().findViewById(R.id.settingButton);
         this.recordingSettings.setOnClickListener(new View.OnClickListener() {
+            /**
+             * {@inheritDoc}
+             * OnClick listener for whether to display the recording settings dialog.
+             */
             @Override
             public void onClick(View view) {
                 showRecordingSettings();
@@ -318,33 +330,15 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 public void onTick(long l) {
                     // increment progress bar
                     timeRemaining.incrementProgressBy(1);
-                    // Get new position
-                    /*
-                    float[] pdrValues = sensorFusion.getSensorValueMap().get(SensorTypes.PDR);
-                    positionX.setText(getString(R.string.x, String.format("%.1f", pdrValues[0])));
-                    positionY.setText(getString(R.string.y, String.format("%.1f", pdrValues[1])));
-                    // Calculate distance travelled
-                    distance += Math.sqrt(Math.pow(pdrValues[0] - previousPosX, 2) + Math.pow(pdrValues[1] - previousPosY, 2));
-                    distanceTravelled.setText(getString(R.string.meter, String.format("%.2f", distance)));
-                    previousPosX = pdrValues[0];
-                    previousPosY = pdrValues[1];
-                    // Display elevation and elevator icon when necessary
-                    float elevationVal = sensorFusion.getElevation();
-                    elevation.setText(getString(R.string.elevation, String.format("%.1f", elevationVal)));
-                    if(sensorFusion.getElevator()) elevatorIcon.setVisibility(View.VISIBLE);
-                    else elevatorIcon.setVisibility(View.GONE);
-
-                    //Rotate compass image to heading angle
-                    compassIcon.setRotation((float) -Math.toDegrees(sensorFusion.passOrientation()));
-
-                     */
+                    //Update the elevation UI elements
                     float elevationVal = sensorFusion.getElevation();
                     updateElevationUI(elevationVal, sensorFusion.getElevator());
 
+                    //Check if the user has changed buildings
                     checkBuildingBounds(currentPosition);
 
+                    //check if the user has changed floors
                     int calcFloor = sensorFusion.getCurrentFloor();
-                    Log.d("CURRENT FLOOR", "current floor" + calcFloor);
 
                     updateFloor(calcFloor);
                 }
@@ -371,6 +365,13 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
        }
     }
 
+    /**
+     * {@link BuildingManager}
+     * A helper method to check if the user has entered or exited a building. If the user is not in any supported building then the ground overlay is removed and
+     * no floor plan is dispalyed.
+     *
+     * @param coordinate The coordinate to check if it falls in the boundaries of any supported building.
+     */
     private void checkBuildingBounds (LatLng coordinate){
         if (buildingManager != null){
             if(buildingManager.checkBoundaries(coordinate)){
@@ -382,6 +383,10 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         }
     }
 
+    /**
+     * A helper method called when the user changes buildings. It is a separate method to force the floor plan to be updated in the UI thread.
+     * The floor spinner is then set up to display the floor plans available for the building the user is in.
+     */
     private void hasEnteredBuilding(){
         getActivity().runOnUiThread(new Runnable() {
             @Override
@@ -400,6 +405,13 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
     }
 
+    /**
+     * An overridden{@link SensorFusionUpdates} method. This method is called by the sensor fusion class each time a new PDR is calculated.
+     * Ensuring that the screen is updated in the UI thread as soon as this calculation is complete. This enables a move responsive UI that updates as soon as
+     * the user takes a step.
+     *
+     * It retrieves all values from {@link SensorFusion}
+     */
     @Override
     public void onPDRUpdate() {
         // Handle PDR update
@@ -413,12 +425,10 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 positionX.setText(getString(R.string.x, String.format("%.1f", pdrValues[0])));
                 positionY.setText(getString(R.string.y, String.format("%.1f", pdrValues[1])));
 
-                Log.d("PDR Values", "x: "+pdrValues[0]+" y: "+pdrValues[1] + "up: "+ elevationVal);
-                Log.d("REF_POINT", "lat: "+ startPosition[0] + " long: "+ startPosition[1] + "alt: "+startPosition[2]);
+                //Updates the users position and path on the map
                 if (recording_map != null) {
+                    //Transform the ENU coordinates to WSG84 coordinates google maps uses
                     LatLng user_step = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startPosition[0], startPosition[1], ecefRefCoords);
-                    Log.d("UserLocation", "lat: "+user_step.latitude+" long: "+user_step.longitude);
-                    //recording_map.addMarker(new MarkerOptions().position(user_step).title("Step"));
                     currentPosition = user_step;
                     updateUserTrajectory(user_step);
                     user_marker.setPosition(user_step);
@@ -434,6 +444,12 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
     }
 
+    /**
+     * An overridden {@link SensorFusionUpdates} method. That is called as soon as the device receives a new orientation update. This is updated in the UI thread,
+     * and updates the compass to show the users direction of movement in the map.
+     *
+     * {@link SensorFusion} is used to retrieve the orientation and by using this observer method the compass will more accurately mirror the users movement than polling.
+     */
     @Override
     public void onOrientationUpdate(){
         getActivity().runOnUiThread(new Runnable() {
@@ -445,12 +461,17 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         });
     }
 
+    /**
+     * An overridden {@link SensorFusionUpdates} that is called as soon as the device receives a new GNSS update. If the showGNSS button is toggled to on,
+     * then GNSS data is displayed on the screen.
+     *
+     * It retrieves all values from {@link SensorFusion}
+     */
     @Override
     public void onGNSSUpdate(){
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                Log.d("GNSS POSITION UPDATE", "GNSS POSITION UPDATE CALLED");
                 if (showGNSS!= null && showGNSS.isChecked()){
                     updateGNSSInfo();
                 }
@@ -458,6 +479,10 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         });
     }
 
+    /**
+     * If the show GNSS button is toggle to on then this method will retrieve the GNSS coordinates and update the map with a marker showing the new GNSS position.
+     * The accuracy of the GNSS position is then displayed in the settings along with the positioning error of the GNSS location relative to the calculated PDR location.
+     */
     public void updateGNSSInfo(){
         float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
         float GNNS_accuracy = sensorFusion.getGNSSAccuracy();
@@ -475,6 +500,11 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         positioning_error.setText(getString(R.string.meter, String.format("%.2f", distanceBetween[0])));
     }
 
+    /**
+     * A helper method to update the elevation UI components in the UI thread.
+     * @param elevationVal The current elevation value, which will be displayed on the screen
+     * @param elevator A boolean indicating whether the user is in an elevator.
+     */
     public void updateElevationUI(float elevationVal, boolean elevator) {
         getActivity().runOnUiThread(new Runnable() {
             @Override
@@ -486,7 +516,12 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         });
     }
 
-    public void updateUserTrajectory (LatLng point){
+    /**
+     * A helper function to update the path drawn on the screen with a new position, without the need to redraw teh entire path.
+     *
+     * @param point The new coordinate to add to the users path.
+     */
+    private void updateUserTrajectory (LatLng point){
         if (user_trajectory != null) {
             List<LatLng> points = user_trajectory.getPoints();
             points.add(point);
@@ -494,12 +529,18 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         }
     }
 
-    public void updateFloor(int calcFloor){
+    /**
+     * A helper function used to check if the user has changed floor, by comparing the new calculated floor from {@link com.openpositioning.PositionMe.PdrProcessing}
+     * is the same as the current floor. If it is nothing happens. If it is different then the spinner that selects the floors is set to this poistion and the
+     * floorplan is updated to the new floor the user is on.
+     *
+     * @param calcFloor The floor calculated by the {@link com.openpositioning.PositionMe.PdrProcessing}.
+     */
+    private void updateFloor(int calcFloor){
         if (currentFloor != calcFloor){
             currentFloor = calcFloor;
             if (buildingManager != null){
                 if (!buildingManager.getCurrentBuilding().equals(Buildings.UNSPECIFIED)){
-                    //sensorFusion.setCurrentFloor(calcFloor);
                     floorSpinner.setSelection(buildingManager.convertFloorToSpinnerIndex(currentFloor));
                     updateFloorPlan(currentFloor);
                 }
@@ -507,7 +548,12 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         }
     }
 
-    public void updateFloorPlan(int floor){
+    /**
+     * A helper function that is used to update the floorplan to the floor the user is currently on. This is done in the UI thread.
+     *
+     * @param floor The new floor ths user is on.
+     */
+    private void updateFloorPlan(int floor){
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -518,20 +564,22 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
     /**
      * Runnable task used to refresh UI elements with live data.
-     * Has to be run through a Handler object to be able to alter UI elements
+     * Has to be run through a Handler object to be able to alter UI elements.
+     * It is used as a polling mechnasim to refresh data that has frequent updates, such as the elevation. This is done in order to promote better
+     * resource utilisation and power consumption, as updating the screen everytime these updates occur is unnecessary.
      */
     private final Runnable refreshDataTask = new Runnable() {
         @Override
         public void run() {
-
-            // Display elevation and elevator icon when necessary
+            // Update the elevation UI elements
             float elevationVal = sensorFusion.getElevation();
             updateElevationUI(elevationVal, sensorFusion.getElevator());
 
+            //Check if the user has changed buildings
             checkBuildingBounds(currentPosition);
 
+            //Check if the user has changed floors
             int calcFloor = sensorFusion.getCurrentFloor();
-            Log.d("CURRENT FLOOR", "current floor" + calcFloor);
 
             updateFloor(calcFloor);
 
@@ -559,7 +607,8 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
     /**
      * {@inheritDoc}
-     * Stops ongoing refresh task, but not the countdown timer which stops automatically
+     * Stops ongoing refresh task, but not the countdown timer which stops automatically.
+     * Stops this class from receiving sensor fusion updates.
      */
     @Override
     public void onPause() {
@@ -571,6 +620,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     /**
      * {@inheritDoc}
      * Restarts UI refreshing task when no countdown task is in progress
+     * Sets this class to receive sensor fusion updates
      */
     @Override
     public void onResume() {
@@ -581,12 +631,19 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         super.onResume();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void onDestroy() {
         this.sensorFusion.removeSensorUpdate(this);
         super.onDestroy();
     }
 
+    /**
+     * A helper method to set up the floor spinner that allows the user to select floors. This method is called when the user changes building
+     * to ensure that this spinner reflects teh available floor plans of the building. It sets an OnItemSelectedListener to monitor if the user selects a new floor.
+     */
     private void setupFloorSpinner() {
         ArrayAdapter<CharSequence> floorAdapter = null;
         if (buildingManager.getCurrentBuilding().equals(Buildings.UNSPECIFIED)){
@@ -597,28 +654,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     android.R.layout.simple_spinner_item);
             floorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         }
-        /*
-        switch (buildingManager.getCurrentBuilding()){
-            case NUCLEUS:
-                floorAdapter = ArrayAdapter.createFromResource(requireContext(),
-                        R.array.floors_nucleus, android.R.layout.simple_spinner_item);
-                floorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                break;
-            case LIBRARY:
-                floorAdapter = ArrayAdapter.createFromResource(requireContext(),
-                        R.array.floors_library, android.R.layout.simple_spinner_item);
-                floorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                break;
-            case FLEMING_JENKINS:
-                floorAdapter = ArrayAdapter.createFromResource(requireContext(),
-                        R.array.floors_fleming, android.R.layout.simple_spinner_item);
-                floorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                break;
-            case UNSPECIFIED:
-                floorAdapter = null;
-                break;
-        }
-         */
 
         if (floorAdapter != null){
             this.floorSpinner.setAdapter(floorAdapter);
@@ -638,6 +673,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 // Handle item selection
                 String selectedFloor = parent.getItemAtPosition(position).toString();
 
+                //Update the displayed floor plan
                 if (buildingManager != null) {
                     buildingManager.updateGroundOverlay(Floors.valueOf(selectedFloor));
                     sensorFusion.setCurrentFloor(buildingManager.convertSpinnerIndexToFloor(position));
@@ -651,6 +687,10 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         });
     }
 
+    /**
+     * A helper method to set up the map type spinner that allows the user to choose between different map types. It sets an OnItemSelectedListener to monitor if the user
+     * selects a new map type and updates the displayed map accordingly.
+     */
     private void mapTypeSpinnerInitialisation() {
         // Set up Spinner functionality as needed
         ArrayAdapter<CharSequence> mapTypeAdapter = ArrayAdapter.createFromResource(requireContext(),
@@ -675,6 +715,11 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         });
     }
 
+    /**
+     * A helper method used to change the text value of the spinner into the map types google supports.
+     *
+     * @param selectedMapType A string indicated the map type selected by the spinner.
+     */
     private void updateMapType(String selectedMapType) {
         if (recording_map != null) {
             int mapType = GoogleMap.MAP_TYPE_NORMAL;
@@ -696,6 +741,10 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         }
     }
 
+    /**
+     * A helper method, used to create a recording bottom sheet dialog. This will be displayed at the bottom of the screen when the user presses the settings button.
+     * It initialises both the floor and map type spinners. Furthermore, it implements an OnCheckedChangeListener to determine if the user has toggled the showGNSS functionality.
+     */
     private void createRecordingSettingsDialog(){
         recordingSettingsDialog = new Dialog(requireContext());
         recordingSettingsDialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -742,6 +791,10 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         });
 
     }
+
+    /**
+     * A helper method used to display the recording settings bottom sheet when a button is clicked.
+     */
     private void showRecordingSettings() {
 
         recordingSettingsDialog.show();

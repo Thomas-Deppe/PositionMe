@@ -4,37 +4,58 @@ import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
 
+/**
+ * A utility class used to convert the PDR coordinates which are relative East North Up (ENU) on a tangent plane to the earths surface to
+ * WSG84 coordinates that google maps uses. This allows the relative coordinates to be accurately transformed into longitude and latitude coordinates used by google maps.
+ */
 public final class CoordinateTransform {
 
+    //Constants used in calculations
     public static final double semimajor_axis = 6378137.0;
     public static final double semiminor_axis = 6356752.31424518;
     public static final double flattening = (semimajor_axis-semiminor_axis)/semimajor_axis;
     public static final double eccentricity_squared = flattening * (2-flattening);
 
+    /**
+     * An empty constructor as this is a utility class no constructor is needed.
+     */
     private CoordinateTransform(){
     }
 
+    /**
+     * Converts WSG84 coordinates to Earth Centred, Earth Fixed (ECEF) coordiantes.
+     * @param latitude The latitude of the coordinate to convert
+     * @param longitude The longitude of the coordinate to convert
+     * @param altitude The altitude of the coordinate to convert
+     * @return The converted ECEF coordinates as a double array with X, Y and Z coordinates
+     */
     public static double[] geodeticToEcef(double latitude, double longitude, double altitude){
         double[] ecefCoords = new double[3];
-        Log.d("geodeticToEcef", "lat: "+latitude+" long: "+longitude+" alt: "+altitude);
         double latRad = Math.toRadians(latitude);
         double lngRad = Math.toRadians(longitude);
-        Log.d("geodeticToEcef", "Rad lat: "+latRad+" Rad long: "+lngRad);
 
         //Calculate Prime Vertical Radius of Curvature
         double N = Math.pow(semimajor_axis,2) /
                 Math.hypot((semimajor_axis*Math.cos(latRad)), (semiminor_axis * Math.sin(latRad)));
 
-        Log.d("geodeticToEcef", "N: "+N);
-
         ecefCoords[0] = (N + altitude) * Math.cos(latRad) * Math.cos(lngRad);
         ecefCoords[1] = (N + altitude) * Math.cos(latRad) * Math.sin(lngRad);
         ecefCoords[2] = (N * Math.pow((semiminor_axis / semimajor_axis),2) + altitude) * Math.sin(latRad);
-        Log.d("geodeticToEcef", "x: "+ecefCoords[0]+" y: "+ecefCoords[1]+" z: "+ecefCoords[2]);
 
         return ecefCoords;
     }
 
+    /**
+     * Converts ENU coordinates to ECEF coordinates from a reference point which is the users start location.
+     * The reference ECEF coordinates are calulcated from the WSG84 coordiantes.
+     * @param east The east displacement in meters
+     * @param north The north displacement in meters
+     * @param up The altitude in meters
+     * @param refLatitude The reference point latitude
+     * @param refLongitude the reference point longitude
+     * @param refAlt the reference point altitude
+     * @return a double array with the X, Y and Z coordinates
+     */
     public static double[] enuToEcef(double east, double north, double up, double refLatitude, double refLongitude, double refAlt){
         double[] calCoords = new double[3];
         double[] ecefRefCoords = geodeticToEcef(refLatitude, refLongitude, refAlt);
@@ -48,6 +69,9 @@ public final class CoordinateTransform {
         return calCoords;
     }
 
+    /**
+     * An overloaded method the same as the previous, but with the ECEF reference coordinates already calculated
+     */
     public static double[] enuToEcef(double east, double north, double up, double refLatitude, double refLongitude, double[] ecefRefCoords){
         double[] calCoords = new double[3];
         double latRad = Math.toRadians(refLatitude);
@@ -60,6 +84,11 @@ public final class CoordinateTransform {
         return calCoords;
     }
 
+    /**
+     * Converts the ECEF coordinates to WSG84 coordinates.
+     * @param ecefCoords The ECEF X, Y and Z coordinates
+     * @return the WSG84 coordiantes as a LatLng
+     */
     public static LatLng ecefToGeodetic(double[] ecefCoords) {
 
         double asq = Math.pow(semimajor_axis,2);
@@ -90,13 +119,26 @@ public final class CoordinateTransform {
         return new LatLng(toDegrees(latitude), toDegrees(longitude));
     }
 
+    /**
+     * Converts the ENU coordiantes to WSG84 coordiantes. First the ENU coordinates have to be converted to ECEF and then they can be converted to WSG84.
+     * @param east The east displacement in meters
+     * @param north The north displacement in meters
+     * @param up The altitude in meters
+     * @param refLatitude The reference point latitude
+     *  @param refLongitude the reference point longitude
+     * @param ecefRefCoords the ECEF reference coordinates
+     * @return LatLng of the converted coordinates.
+     */
     public static LatLng enuToGeodetic(double east, double north, double up, double refLatitude, double refLongitude, double[] ecefRefCoords) {
         double[] ecefCoords = enuToEcef(east, north, up, refLatitude, refLongitude, ecefRefCoords);
-        Log.d("ECEFCOORDS", "x: "+ecefCoords[0]+" y: "+ecefCoords[1]+" z: "+ecefCoords[2]);
 
         return ecefToGeodetic(ecefCoords);
     }
 
+    /**
+     * An overloadden method similar to the previous, but the reference coordinates have not been calculated. They will be
+     * calculated.
+     */
     public static LatLng enuToGeodetic(double east, double north, double up, double refLatitude, double refLongitude, double refAlt) {
         double[] ecefCoords = enuToEcef(east, north, up, refLatitude, refLongitude, refAlt);
         Log.d("ECEFCOORDS", "x: "+ecefCoords[0]+" y: "+ecefCoords[1]+" z: "+ecefCoords[2]);
@@ -104,6 +146,11 @@ public final class CoordinateTransform {
         return ecefToGeodetic(ecefCoords);
     }
 
+    /**
+     * Helper method to convert radians to degrees.
+     * @param val The value to convert in degrees.
+     * @return The value in radians
+     */
     public static double toDegrees(double val) {
         return val * (180/Math.PI);
     }
