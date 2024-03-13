@@ -1,7 +1,5 @@
 package com.openpositioning.PositionMe;
 
-
-
 public interface SensorFusionUpdates {
 
      enum update_type {
