@@ -14,6 +14,7 @@ import android.util.Log;
 
 import androidx.preference.PreferenceManager;
 
+import com.google.gson.JsonObject;
 import com.openpositioning.PositionMe.MainActivity;
 import com.openpositioning.PositionMe.PathView;
 import com.openpositioning.PositionMe.PdrProcessing;
@@ -868,6 +869,16 @@ public class SensorFusion implements SensorEventListener, Observer {
         Traj.Trajectory sentTrajectory = trajectory.build();
         // Pass object to communications object
         this.serverCommunications.sendTrajectory(sentTrajectory);
+    }
+
+    /**
+     * Send the wifi positioning fingerprint to the openpositioning server.
+     *
+     * @see ServerCommunications for sending and receiving data via HTTPS.
+     */
+    public void sendWifiFingerprintToCloud(JsonObject fingerprint) {
+        // Pass object to communications object
+        this.serverCommunications.sendWifi(fingerprint);
     }
 
     /**
