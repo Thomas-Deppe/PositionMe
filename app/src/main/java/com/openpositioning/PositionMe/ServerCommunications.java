@@ -73,6 +73,7 @@ public class ServerCommunications implements Observable {
     private static final String uploadWifiURL = "https://openpositioning.org/api/position/fine" + userKey
                     + "?skip=0&limit=30&key=" + masterKey;
     private static final String PROTOCOL_CONTENT_TYPE = "multipart/form-data";
+    private static final String PROTOCOL_CONTENT_TYPE_FINGERPRINT = "application/json";
     private static final String PROTOCOL_ACCEPT_TYPE = "application/json";
 
 
@@ -147,7 +148,7 @@ public class ServerCommunications implements Observable {
             // Create a POST request with the required headers
             okhttp3.Request request = new okhttp3.Request.Builder().url(uploadWifiURL).post(requestBody)
                     .addHeader("accept", PROTOCOL_ACCEPT_TYPE)
-                    .addHeader("Content-Type", PROTOCOL_CONTENT_TYPE).build(); // TODO: CHECK THe content type
+                    .addHeader("Content-Type", PROTOCOL_CONTENT_TYPE_FINGERPRINT).build();
 
             // Enqueue the request to be executed asynchronously and handle the response
             client.newCall(request).enqueue(new okhttp3.Callback() {
@@ -191,9 +192,9 @@ public class ServerCommunications implements Observable {
             });
         }
         else {
-            // If the device is not connected to network or allowed to send, do not send trajectory
+            // If the device is not connected to network or allowed to send, do not request
             // and notify observers and user
-            System.err.println("No uploading allowed right now!");
+            System.err.println("No internet connection, No request allowed right now!");
             success = false;
             notifyObservers(1);
         }
