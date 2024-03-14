@@ -14,6 +14,7 @@ import android.util.Log;
 
 import androidx.preference.PreferenceManager;
 
+import com.google.gson.JsonObject;
 import com.openpositioning.PositionMe.MainActivity;
 import com.openpositioning.PositionMe.PathView;
 import com.openpositioning.PositionMe.PdrProcessing;
@@ -860,11 +861,9 @@ public class SensorFusion implements SensorEventListener, Observer {
      *
      * @see ServerCommunications for sending and receiving data via HTTPS.
      */
-    public void sendWifiFingerprintToCloud() {
-        // Build object
-        Traj.Trajectory sentTrajectory = trajectory.build(); // todo: change to the fingerprint builder
+    public void sendWifiFingerprintToCloud(JsonObject fingerprint) {
         // Pass object to communications object
-        this.serverCommunications.sendWifi(sentTrajectory);
+        this.serverCommunications.sendWifi(fingerprint);
     }
 
     /**
