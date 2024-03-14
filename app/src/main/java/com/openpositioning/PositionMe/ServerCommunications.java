@@ -7,6 +7,7 @@ import android.net.NetworkInfo;
 
 import androidx.preference.PreferenceManager;
 
+import com.google.gson.JsonObject;
 import com.openpositioning.PositionMe.fragments.FilesFragment;
 import com.openpositioning.PositionMe.sensors.Observable;
 import com.openpositioning.PositionMe.sensors.Observer;
@@ -58,6 +59,7 @@ public class ServerCommunications implements Observable {
     private boolean success;
     private List<Observer> observers;
 
+
     // Static constants necessary for communications
     private static final String userKey = BuildConfig.OPENPOSITIONING_API_KEY;
     private static final String masterKey = BuildConfig.OPENPOSITIONING_MASTER_KEY;
@@ -75,6 +77,9 @@ public class ServerCommunications implements Observable {
     private static final String PROTOCOL_CONTENT_TYPE = "multipart/form-data";
     private static final String PROTOCOL_CONTENT_TYPE_FINGERPRINT = "application/json";
     private static final String PROTOCOL_ACCEPT_TYPE = "application/json";
+
+    public static final MediaType JSON
+            = MediaType.parse("application/json; charset=utf-8");
 
 
 
@@ -103,29 +108,10 @@ public class ServerCommunications implements Observable {
      *
      * @param fingerprint
      */
-    public void sendWifi(Traj.Trajectory fingerprint){ // todo: change the data type to object
+    public void sendWifi(JsonObject fingerprint){
 
-        // Convert the trajectory to byte array
-        byte[] binaryFingerprint = fingerprint.toByteArray();
-
-        // Get the directory path for storing the file with the trajectory
-        java.io.File path = context.getFilesDir();
-
-        // Format the file name according to date
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yy-HH-mm-ss");
-        Date date = new Date();
-        java.io.File file = new File(path, "WifiFingerprint_" + dateFormat.format(date) +  ".txt");
-
-        try {
-            // Write the binary data to the file
-            FileOutputStream stream = new FileOutputStream(file);
-            stream.write(binaryFingerprint);
-            stream.close();
-            System.out.println("Recorded binary trajectory for debugging stored in: " + path);
-        } catch (IOException ee) {
-            // Catch and print if writing to the file fails
-            System.err.println("Storing of recorded binary trajectory failed: " + ee.getMessage());
-        }
+        // Convert the JSON fingerprint object to string
+        String stringFingerprint = fingerprint.toString();
 
         // Check connections available before sending data
         checkNetworkStatus();
@@ -139,14 +125,13 @@ public class ServerCommunications implements Observable {
             // Instantiate client for HTTP requests
             OkHttpClient client = new OkHttpClient();
 
-            // Create a request body with a file to upload in multipart/form-data format
-            RequestBody requestBody = new MultipartBody.Builder().setType(MultipartBody.FORM)
-                    .addFormDataPart("file", file.getName(),
-                            RequestBody.create(MediaType.parse("text/plain"), file))
-                    .build();
+            // Create a request body with a file to upload in JSON format
+            RequestBody body = RequestBody.create(stringFingerprint, JSON);
 
             // Create a POST request with the required headers
-            okhttp3.Request request = new okhttp3.Request.Builder().url(uploadWifiURL).post(requestBody)
+            okhttp3.Request request = new okhttp3.Request.Builder()
+                    .url(uploadWifiURL)
+                    .post(body)
                     .addHeader("accept", PROTOCOL_ACCEPT_TYPE)
                     .addHeader("Content-Type", PROTOCOL_CONTENT_TYPE_FINGERPRINT).build();
 
@@ -169,7 +154,6 @@ public class ServerCommunications implements Observable {
                         // If the response is unsuccessful, delete the local file and throw an
                         // exception
                         if (!response.isSuccessful()) {
-                            //file.delete();
                             System.err.println("POST error response: " + responseBody.string());
                             success = false;
                             notifyObservers(1);
@@ -185,7 +169,6 @@ public class ServerCommunications implements Observable {
                         System.out.println("Successful post response: " + responseBody.string());
 
                         // Delete local file and set success to true
-                        success = file.delete();
                         notifyObservers(1);
                     }
                 }
