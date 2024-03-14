@@ -422,6 +422,7 @@ public class SensorFusion implements SensorEventListener, Observer {
             } catch (JSONException e) {
                 e.printStackTrace();
             }
+//            sendWifiJsonToCloud(jsonString);
 
             this.fusionProcessing.detectOutliers(this.wifiList);
         }
@@ -876,7 +877,7 @@ public class SensorFusion implements SensorEventListener, Observer {
      *
      * @see ServerCommunications for sending and receiving data via HTTPS.
      */
-    public void sendWifiFingerprintToCloud(JsonObject fingerprint) {
+    public void sendWifiJsonToCloud(JsonObject fingerprint) {
         // Pass object to communications object
         this.serverCommunications.sendWifi(fingerprint);
     }
