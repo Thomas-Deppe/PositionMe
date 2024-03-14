@@ -394,10 +394,33 @@ public class SensorFusion implements SensorEventListener, Observer {
      *
      * Receives updates from {@link WifiDataProcessor}.
      *
-     * @see WifiDataProcessor object for wifi scanning.
+     * @see WifiDataProcessor object for server communication.
      */
     @Override
     public void update(Object[] wifiList) {
+        // Save newest wifi values to local variable
+        this.wifiList = Stream.of(wifiList).map(o -> (Wifi) o).collect(Collectors.toList());
+        if(this.saveRecording) {
+            Traj.WiFi_Sample.Builder wifiData = Traj.WiFi_Sample.newBuilder()
+                    .setRelativeTimestamp(android.os.SystemClock.uptimeMillis()-bootTime);
+            for(Wifi data : this.wifiList) {
+                wifiData.addMacScans(Traj.Mac_Scan.newBuilder()
+                        .setRelativeTimestamp(android.os.SystemClock.uptimeMillis() - bootTime)
+                        .setMac(data.getBssid()).setRssi(data.getLevel()));
+            }
+            this.trajectory.addWifiData(wifiData);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Receives updates from {@link WifiDataProcessor}.
+     *
+     * @see WifiDataProcessor object for wifi scanning.
+     */
+    @Override
+    public void updateWifi(Object[] objList) {
         // Save newest wifi values to local variable
         this.wifiList = Stream.of(wifiList).map(o -> (Wifi) o).collect(Collectors.toList());
         if(this.saveRecording) {
