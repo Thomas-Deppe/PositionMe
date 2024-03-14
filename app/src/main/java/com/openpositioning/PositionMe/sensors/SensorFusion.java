@@ -856,6 +856,18 @@ public class SensorFusion implements SensorEventListener, Observer {
     }
 
     /**
+     * Send the wifi positioning fingerprint to the openpositioning server.
+     *
+     * @see ServerCommunications for sending and receiving data via HTTPS.
+     */
+    public void sendWifiFingerprintToCloud() {
+        // Build object
+        Traj.Trajectory sentTrajectory = trajectory.build(); // todo: change to the fingerprint builder
+        // Pass object to communications object
+        this.serverCommunications.sendWifi(sentTrajectory);
+    }
+
+    /**
      * Creates a {@link Traj.Sensor_Info} objects from the specified sensor's data.
      *
      * @param sensor    MovementSensor objects with populated sensorInfo fields

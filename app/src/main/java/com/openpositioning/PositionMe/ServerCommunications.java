@@ -101,9 +101,9 @@ public class ServerCommunications implements Observable {
      * trajectory is passed to the method. It is processed into the right format for sending
      * to the API server.
      *
-     * @param trajectory    Traj object matching all the timing and formal restrictions.
+     * @param fingerprint
      */
-    public void sendWifi(Traj.Trajectory trajectory, Traj.Trajectory fingerprint){ // todo: change the data type to object
+    public void sendWifi(Traj.Trajectory fingerprint){ // todo: change the data type to object
 
         // Convert the trajectory to byte array
         byte[] binaryFingerprint = fingerprint.toByteArray();
