@@ -21,6 +21,8 @@ import com.openpositioning.PositionMe.SensorFusionUpdates;
 import com.openpositioning.PositionMe.ServerCommunications;
 import com.openpositioning.PositionMe.Traj;
 
+import org.json.JSONException;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -93,6 +95,8 @@ public class SensorFusion implements SensorEventListener, Observer {
     // Trajectory object containing all data
     private Traj.Trajectory.Builder trajectory;
 
+    private FusionProcessing fusionProcessing;
+
     // Settings
     private boolean saveRecording;
     private float filter_coefficient;
@@ -154,6 +158,8 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.locationListener= new myLocationListener();
         // Timer to store sensor values in the trajectory object
         this.storeTrajectoryTimer = new Timer();
+
+        this.fusionProcessing = new FusionProcessing();
         // Counters to track elements with slower frequency
         this.counter = 0;
         this.secondCounter = 0;
@@ -408,6 +414,15 @@ public class SensorFusion implements SensorEventListener, Observer {
                         .setMac(data.getBssid()).setRssi(data.getLevel()));
             }
             this.trajectory.addWifiData(wifiData);
+
+            try {
+                String jsonString = this.fusionProcessing.toJson(this.wifiList).toString();
+                Log.d("WIFI JSON: ", jsonString);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            this.fusionProcessing.detectOutliers(this.wifiList);
         }
     }
 
