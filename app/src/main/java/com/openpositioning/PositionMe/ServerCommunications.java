@@ -70,6 +70,8 @@ public class ServerCommunications implements Observable {
     private static final String infoRequestURL =
             "https://openpositioning.org/api/live/users/trajectories/" + userKey
                     + "?key=" + masterKey;
+    private static final String uploadWifiURL = "https://openpositioning.org/api/position/fine" + userKey
+                    + "?skip=0&limit=30&key=" + masterKey;
     private static final String PROTOCOL_CONTENT_TYPE = "multipart/form-data";
     private static final String PROTOCOL_ACCEPT_TYPE = "application/json";
 
@@ -91,6 +93,111 @@ public class ServerCommunications implements Observable {
         checkNetworkStatus();
 
         this.observers = new ArrayList<>();
+    }
+
+    /**
+     * Outgoing communication request with a {@link Traj trajectory} object. The recorded
+     * trajectory is passed to the method. It is processed into the right format for sending
+     * to the API server.
+     *
+     * @param trajectory    Traj object matching all the timing and formal restrictions.
+     */
+    public void sendWifi(Traj.Trajectory trajectory, Traj.Trajectory fingerprint){ // todo: change the data type to object
+
+        // Convert the trajectory to byte array
+        byte[] binaryFingerprint = fingerprint.toByteArray();
+
+        // Get the directory path for storing the file with the trajectory
+        java.io.File path = context.getFilesDir();
+
+        // Format the file name according to date
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yy-HH-mm-ss");
+        Date date = new Date();
+        java.io.File file = new File(path, "WifiFingerprint_" + dateFormat.format(date) +  ".txt");
+
+        try {
+            // Write the binary data to the file
+            FileOutputStream stream = new FileOutputStream(file);
+            stream.write(binaryFingerprint);
+            stream.close();
+            System.out.println("Recorded binary trajectory for debugging stored in: " + path);
+        } catch (IOException ee) {
+            // Catch and print if writing to the file fails
+            System.err.println("Storing of recorded binary trajectory failed: " + ee.getMessage());
+        }
+
+        // Check connections available before sending data
+        checkNetworkStatus();
+
+        // Check if user preference allows for syncing with mobile data
+        // TODO: add sync delay and enforce settings
+        boolean enableMobileData = this.settings.getBoolean("mobile_sync", false);
+
+        // Check if device is connected to WiFi or to mobile data with enabled preference
+        if(this.isWifiConn || (enableMobileData && isMobileConn)) {
+            // Instantiate client for HTTP requests
+            OkHttpClient client = new OkHttpClient();
+
+            // Create a request body with a file to upload in multipart/form-data format
+            RequestBody requestBody = new MultipartBody.Builder().setType(MultipartBody.FORM)
+                    .addFormDataPart("file", file.getName(),
+                            RequestBody.create(MediaType.parse("text/plain"), file))
+                    .build();
+
+            // Create a POST request with the required headers
+            okhttp3.Request request = new okhttp3.Request.Builder().url(uploadWifiURL).post(requestBody)
+                    .addHeader("accept", PROTOCOL_ACCEPT_TYPE)
+                    .addHeader("Content-Type", PROTOCOL_CONTENT_TYPE).build(); // TODO: CHECK THe content type
+
+            // Enqueue the request to be executed asynchronously and handle the response
+            client.newCall(request).enqueue(new okhttp3.Callback() {
+
+                // Handle failure to get response from the server
+                @Override public void onFailure(Call call, IOException e) {
+                    e.printStackTrace();
+                    System.err.println("Failure to get response");
+                    // Delete the local file and set success to false
+                    //file.delete();
+                    success = false;
+                    notifyObservers(1);
+                }
+
+                // Process the server's response
+                @Override public void onResponse(Call call, Response response) throws IOException {
+                    try (ResponseBody responseBody = response.body()) {
+                        // If the response is unsuccessful, delete the local file and throw an
+                        // exception
+                        if (!response.isSuccessful()) {
+                            //file.delete();
+                            System.err.println("POST error response: " + responseBody.string());
+                            success = false;
+                            notifyObservers(1);
+                            throw new IOException("Unexpected code " + response);
+                        }
+
+                        // Print the response headers
+                        Headers responseHeaders = response.headers();
+                        for (int i = 0, size = responseHeaders.size(); i < size; i++) {
+                            System.out.println(responseHeaders.name(i) + ": " + responseHeaders.value(i));
+                        }
+                        // Print a confirmation of a successful POST to API
+                        System.out.println("Successful post response: " + responseBody.string());
+
+                        // Delete local file and set success to true
+                        success = file.delete();
+                        notifyObservers(1);
+                    }
+                }
+            });
+        }
+        else {
+            // If the device is not connected to network or allowed to send, do not send trajectory
+            // and notify observers and user
+            System.err.println("No uploading allowed right now!");
+            success = false;
+            notifyObservers(1);
+        }
+
     }
 
     /**
