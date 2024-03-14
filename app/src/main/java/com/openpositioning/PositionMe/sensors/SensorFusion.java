@@ -416,24 +416,13 @@ public class SensorFusion implements SensorEventListener, Observer {
             this.trajectory.addWifiData(wifiData);
 
             try {
-                String jsonString = this.fusionProcessing.toJson(this.wifiList);
+                String jsonString = this.fusionProcessing.toJson(this.wifiList).toString();
                 Log.d("WIFI JSON: ", jsonString);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
 
             this.fusionProcessing.detectOutliers(this.wifiList);
-
-            /*
-            try {
-                wifiData.getMacScansBuilderList();
-                String wifiJson = JsonFormat.printer().print(wifiData.build());
-                // Print or send the JSON string to the server
-                System.out.println("WIFI JSON: "+wifiJson); // or sendToServer(wifiJson);
-            } catch (InvalidProtocolBufferException e) {
-                e.printStackTrace();
-            }
-             */
         }
     }
 

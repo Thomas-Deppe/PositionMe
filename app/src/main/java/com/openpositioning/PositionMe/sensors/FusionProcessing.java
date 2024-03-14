@@ -71,7 +71,7 @@ public class FusionProcessing {
         return calculateMedian(absoluteDeviations);
     }
 
-    public String toJson(List<Wifi> wifiList) throws JSONException {
+    public JSONObject toJson(List<Wifi> wifiList) throws JSONException {
         JSONObject json = new JSONObject();
         JSONObject fingerprint = new JSONObject();
         for (Wifi data : wifiList){
@@ -82,7 +82,7 @@ public class FusionProcessing {
 
         json.put("wf", fingerprint);
 
-        return json.toString();
+        return json;
     }
 
 }
