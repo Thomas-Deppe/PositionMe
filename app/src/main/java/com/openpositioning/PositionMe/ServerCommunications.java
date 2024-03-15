@@ -13,6 +13,8 @@ import com.openpositioning.PositionMe.sensors.Observable;
 import com.openpositioning.PositionMe.sensors.Observer;
 import com.google.protobuf.util.JsonFormat;
 
+import org.json.JSONObject;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -108,7 +110,7 @@ public class ServerCommunications implements Observable {
      *
      * @param fingerprint
      */
-    public void sendWifi(JsonObject fingerprint){
+    public void sendWifi(JSONObject fingerprint){
 
         // Convert the JSON fingerprint object to string
         String stringFingerprint = fingerprint.toString();
@@ -525,6 +527,9 @@ public class ServerCommunications implements Observable {
             else if (index == 1 && o instanceof MainActivity) {
                 o.update(new Boolean[] {success});
             }
+            else if (index == 2 ){
+
+                }
         }
     }
 }

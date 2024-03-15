@@ -23,6 +23,7 @@ import com.openpositioning.PositionMe.ServerCommunications;
 import com.openpositioning.PositionMe.Traj;
 
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -417,12 +418,13 @@ public class SensorFusion implements SensorEventListener, Observer {
             this.trajectory.addWifiData(wifiData);
 
             try {
-                String jsonString = this.fusionProcessing.toJson(this.wifiList).toString();
+                JSONObject jsonfingerprint = this.fusionProcessing.toJson(this.wifiList);
+                String jsonString = jsonfingerprint.toString();
                 Log.d("WIFI JSON: ", jsonString);
+                sendWifiJsonToCloud(jsonfingerprint);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
-//            sendWifiJsonToCloud(jsonString);
 
             this.fusionProcessing.detectOutliers(this.wifiList);
         }
@@ -877,7 +879,7 @@ public class SensorFusion implements SensorEventListener, Observer {
      *
      * @see ServerCommunications for sending and receiving data via HTTPS.
      */
-    public void sendWifiJsonToCloud(JsonObject fingerprint) {
+    public void sendWifiJsonToCloud(JSONObject fingerprint) {
         // Pass object to communications object
         this.serverCommunications.sendWifi(fingerprint);
     }
