@@ -589,7 +589,21 @@ public class MainActivity extends AppCompatActivity implements Observer {
      * Calls the corresponding handler that runs a toast on the Main UI thread.
      */
     @Override
-    public void update(Object[] objList) {
+    public void updateServer(Object[] objList) {
+        assert objList[0] instanceof Boolean;
+        if((Boolean) objList[0]) {
+            this.httpResponseHandler.post(displayToastTaskSuccess);
+        }
+        else {
+            this.httpResponseHandler.post(displayToastTaskFailure);
+        }
+    }
+    /**
+     * {@inheritDoc}
+     * Calls the corresponding handler that runs a toast on the Main UI thread.
+     */
+    @Override
+    public void updateWifi(Object[] objList) {
         assert objList[0] instanceof Boolean;
         if((Boolean) objList[0]) {
             this.httpResponseHandler.post(displayToastTaskSuccess);

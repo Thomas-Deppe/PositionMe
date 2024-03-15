@@ -127,7 +127,7 @@ public class FilesFragment extends Fragment implements Observer {
      *                              response from the server.
      */
     @Override
-    public void update(Object[] singletonStringList) {
+    public void updateWifi(Object[] singletonStringList) {
         // Cast input as a string
         String infoString = (String) singletonStringList[0];
         // Check if the string is non-null and non-empty before processing
@@ -143,6 +143,17 @@ public class FilesFragment extends Fragment implements Observer {
                 }
             });
         }
+    }
+    /**
+     * {@inheritDoc}
+     * Called by {@link ServerCommunications} when the response to the HTTP info request is received.
+     *
+     * @param singletonStringList   a single string wrapped in an object array containing the http
+     *                              response from the server.
+     */
+    @Override
+    public void updateServer(Object[] singletonStringList) {
+        return;
     }
 
     /**
