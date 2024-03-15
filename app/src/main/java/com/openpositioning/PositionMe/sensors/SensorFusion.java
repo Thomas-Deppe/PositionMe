@@ -399,12 +399,28 @@ public class SensorFusion implements SensorEventListener, Observer {
     /**
      * {@inheritDoc}
      *
+     * Receives updates from {@link ServerCommunications}.
+     *
+     * @see ServerCommunications for more information abour notify Observables.
+     */
+    @Override
+    public void updateServer(Object[] wifiList) {
+
+        // probably add a notify as a new
+
+    }
+
+
+
+    /**
+     * {@inheritDoc}
+     *
      * Receives updates from {@link WifiDataProcessor}.
      *
      * @see WifiDataProcessor object for wifi scanning.
      */
     @Override
-    public void update(Object[] wifiList) {
+    public void updateWifi(Object[] wifiList) {
         // Save newest wifi values to local variable
         this.wifiList = Stream.of(wifiList).map(o -> (Wifi) o).collect(Collectors.toList());
         if(this.saveRecording) {

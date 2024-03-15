@@ -147,7 +147,7 @@ public class ServerCommunications implements Observable {
                     // Delete the local file and set success to false
                     //file.delete();
                     success = false;
-                    notifyObservers(1);
+                    notifyObservers(2);
                 }
 
                 // Process the server's response
@@ -158,7 +158,7 @@ public class ServerCommunications implements Observable {
                         if (!response.isSuccessful()) {
                             System.err.println("POST error response: " + responseBody.string());
                             success = false;
-                            notifyObservers(1);
+                            notifyObservers(2);
                             throw new IOException("Unexpected code " + response);
                         }
 
@@ -171,7 +171,7 @@ public class ServerCommunications implements Observable {
                         System.out.println("Successful post response: " + responseBody.string());
 
                         // Delete local file and set success to true
-                        notifyObservers(1);
+                        notifyObservers(2);
                     }
                 }
             });
@@ -181,7 +181,7 @@ public class ServerCommunications implements Observable {
             // and notify observers and user
             System.err.println("No internet connection, No request allowed right now!");
             success = false;
-            notifyObservers(1);
+            notifyObservers(2);
         }
 
     }
@@ -522,14 +522,14 @@ public class ServerCommunications implements Observable {
     public void notifyObservers(int index) {
         for(Observer o : observers) {
             if(index == 0 && o instanceof FilesFragment) {
-                o.update(new String[] {infoResponse});
+                o.updateWifi(new String[] {infoResponse});
             }
             else if (index == 1 && o instanceof MainActivity) {
-                o.update(new Boolean[] {success});
+                o.updateWifi(new Boolean[] {success});
             }
-            else if (index == 2 ){
-
-                }
+            else if (index == 2 && o instanceof MainActivity) { // for the
+                o.updateServer(new Boolean[] {success});
+            }
         }
     }
 }

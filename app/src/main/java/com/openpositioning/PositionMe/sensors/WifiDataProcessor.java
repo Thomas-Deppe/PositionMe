@@ -281,7 +281,7 @@ public class WifiDataProcessor implements Observable {
     @Override
     public void notifyObservers(int idx) {
         for(Observer o : observers) {
-            o.update(wifiData);
+            o.updateWifi(wifiData);
         }
     }
 
