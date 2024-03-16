@@ -7,11 +7,13 @@ import android.net.NetworkInfo;
 
 import androidx.preference.PreferenceManager;
 
-import com.google.gson.JsonObject;
 import com.openpositioning.PositionMe.fragments.FilesFragment;
 import com.openpositioning.PositionMe.sensors.Observable;
 import com.openpositioning.PositionMe.sensors.Observer;
 import com.google.protobuf.util.JsonFormat;
+import com.openpositioning.PositionMe.sensors.SensorFusion;
+
+import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -49,6 +51,9 @@ public class ServerCommunications implements Observable {
 
     // Application context for handling permissions and devices
     private final Context context;
+
+    private static ServerCommunications mainInstance;
+
     // Network status checking
     private ConnectivityManager connMgr;
     private boolean isWifiConn;
@@ -90,8 +95,9 @@ public class ServerCommunications implements Observable {
      *
      * @param context   application context for handling permissions and devices.
      */
-    public ServerCommunications(Context context) {
-        this.context = context;
+
+    private ServerCommunications(Context context) {
+        this.context = context.getApplicationContext();
         this.connMgr = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         this.settings = PreferenceManager.getDefaultSharedPreferences(context);
         this.isWifiConn = false;
@@ -101,6 +107,21 @@ public class ServerCommunications implements Observable {
         this.observers = new ArrayList<>();
     }
 
+    public static ServerCommunications getMainInstance(Context context) {
+        if (mainInstance == null) {
+            mainInstance = new ServerCommunications(context);
+        }
+        return mainInstance;
+    }
+
+    // Optional: If you need a method to access the instance without passing context after initial setup
+    public static ServerCommunications getMainInstance() {
+        if (mainInstance == null) {
+            throw new IllegalStateException("ServerCommunications has not been initialized.");
+        }
+        return mainInstance;
+    }
+
     /**
      * Outgoing communication request with a {@link Traj trajectory} object. The recorded
      * trajectory is passed to the method. It is processed into the right format for sending
@@ -108,7 +129,7 @@ public class ServerCommunications implements Observable {
      *
      * @param fingerprint
      */
-    public void sendWifi(JsonObject fingerprint){
+    public void sendWifi(JSONObject fingerprint){
 
         // Convert the JSON fingerprint object to string
         String stringFingerprint = fingerprint.toString();
@@ -145,7 +166,7 @@ public class ServerCommunications implements Observable {
                     // Delete the local file and set success to false
                     //file.delete();
                     success = false;
-                    notifyObservers(1);
+                    //notifyObservers(2);
                 }
 
                 // Process the server's response
@@ -156,7 +177,7 @@ public class ServerCommunications implements Observable {
                         if (!response.isSuccessful()) {
                             System.err.println("POST error response: " + responseBody.string());
                             success = false;
-                            notifyObservers(1);
+                            notifyObservers(2);
                             throw new IOException("Unexpected code " + response);
                         }
 
@@ -169,7 +190,7 @@ public class ServerCommunications implements Observable {
                         System.out.println("Successful post response: " + responseBody.string());
 
                         // Delete local file and set success to true
-                        notifyObservers(1);
+                        notifyObservers(2);
                     }
                 }
             });
@@ -179,7 +200,7 @@ public class ServerCommunications implements Observable {
             // and notify observers and user
             System.err.println("No internet connection, No request allowed right now!");
             success = false;
-            notifyObservers(1);
+            notifyObservers(2);
         }
 
     }
@@ -520,10 +541,13 @@ public class ServerCommunications implements Observable {
     public void notifyObservers(int index) {
         for(Observer o : observers) {
             if(index == 0 && o instanceof FilesFragment) {
-                o.update(new String[] {infoResponse});
+                o.updateServer(new String[] {infoResponse});
             }
             else if (index == 1 && o instanceof MainActivity) {
-                o.update(new Boolean[] {success});
+                o.updateServer(new Boolean[] {success});
+            }
+            else if (index == 2 && o instanceof SensorFusion) { // for the
+                o.updateServer(new Boolean[] {success});
             }
         }
     }

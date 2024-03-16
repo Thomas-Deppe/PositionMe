@@ -6,6 +6,7 @@ public interface SensorFusionUpdates {
         PDR_UPDATE,
         GNSS_UPDATE,
         ORIENTATION_UPDATE,
+         //todo:NEW FUSED UPDATE
     }
 
     void onPDRUpdate();

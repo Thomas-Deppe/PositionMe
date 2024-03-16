@@ -252,13 +252,24 @@ public class WifiDataProcessor implements Observable {
     public void checkWifiThrottling(){
         if(checkWifiPermissions()) {
             //If the device does not support wifi throttling an exception is thrown
-            try {
-                if(Settings.Global.getInt(context.getContentResolver(), "wifi_scan_throttle_enabled")==1) {
-                    //Inform user to disable wifi throttling
+            if (Build.VERSION.SDK_INT >= 29) {
+                boolean isThrottled = true;
+                if (wifiManager != null){
+                    isThrottled = wifiManager.isScanThrottleEnabled();
+                }
+
+                if (isThrottled) {
                     Toast.makeText(context, "Disable Wi-Fi Throttling", Toast.LENGTH_SHORT).show();
                 }
-            } catch (Settings.SettingNotFoundException e) {
-                e.printStackTrace();
+            } else {
+                try {
+                    if(Settings.Global.getInt(context.getContentResolver(), "wifi_scan_throttle_enabled")==1) {
+                        //Inform user to disable wifi throttling
+                        Toast.makeText(context, "Disable Wi-Fi Throttling", Toast.LENGTH_SHORT).show();
+                    }
+                } catch (Settings.SettingNotFoundException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
@@ -281,7 +292,7 @@ public class WifiDataProcessor implements Observable {
     @Override
     public void notifyObservers(int idx) {
         for(Observer o : observers) {
-            o.update(wifiData);
+            o.updateWifi(wifiData);
         }
     }
 

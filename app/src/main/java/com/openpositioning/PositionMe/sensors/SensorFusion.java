@@ -23,6 +23,7 @@ import com.openpositioning.PositionMe.ServerCommunications;
 import com.openpositioning.PositionMe.Traj;
 
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -229,7 +230,9 @@ public class SensorFusion implements SensorEventListener, Observer {
         wifiProcessor.registerObserver(this);
         this.gnssProcessor = new GNSSDataProcessor(context,locationListener);
         // Create object handling HTTPS communication
-        this.serverCommunications = new ServerCommunications(context);
+        //this.serverCommunications = new ServerCommunications(context);
+        this.serverCommunications = ServerCommunications.getMainInstance();
+        this.serverCommunications.registerObserver(this);
         // Save absolute and relative start time
         this.absoluteStartTime = System.currentTimeMillis();
         this.bootTime = android.os.SystemClock.uptimeMillis();
@@ -344,6 +347,7 @@ public class SensorFusion implements SensorEventListener, Observer {
                 //Store time of step
                 long stepTime = android.os.SystemClock.uptimeMillis() - bootTime;
                 float[] newCords = this.pdrProcessing.updatePdr(stepTime, this.accelMagnitude, this.orientation[0]);
+                //Todo: update fusion processing algorithm
                 notifySensorUpdate(SensorFusionUpdates.update_type.PDR_UPDATE);
                 if (saveRecording) {
                     // Store the PDR coordinates for plotting the trajectory
@@ -398,12 +402,28 @@ public class SensorFusion implements SensorEventListener, Observer {
     /**
      * {@inheritDoc}
      *
+     * Receives updates from {@link ServerCommunications}.
+     *
+     * @see ServerCommunications for more information abour notify Observables.
+     */
+    @Override
+    public void updateServer(Object[] wifiList) {
+        //Todo: Call fusion processing update new wifi fingerprint
+        // probably add a notify as a new
+
+    }
+
+
+
+    /**
+     * {@inheritDoc}
+     *
      * Receives updates from {@link WifiDataProcessor}.
      *
      * @see WifiDataProcessor object for wifi scanning.
      */
     @Override
-    public void update(Object[] wifiList) {
+    public void updateWifi(Object[] wifiList) {
         // Save newest wifi values to local variable
         this.wifiList = Stream.of(wifiList).map(o -> (Wifi) o).collect(Collectors.toList());
         if(this.saveRecording) {
@@ -417,8 +437,10 @@ public class SensorFusion implements SensorEventListener, Observer {
             this.trajectory.addWifiData(wifiData);
 
             try {
-                String jsonString = this.fusionProcessing.toJson(this.wifiList).toString();
+                JSONObject jsonfingerprint = this.fusionProcessing.toJson(this.wifiList);
+                String jsonString = jsonfingerprint.toString();
                 Log.d("WIFI JSON: ", jsonString);
+                sendWifiJsonToCloud(jsonfingerprint);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -876,7 +898,7 @@ public class SensorFusion implements SensorEventListener, Observer {
      *
      * @see ServerCommunications for sending and receiving data via HTTPS.
      */
-    public void sendWifiFingerprintToCloud(JsonObject fingerprint) {
+    public void sendWifiJsonToCloud(JSONObject fingerprint) {
         // Pass object to communications object
         this.serverCommunications.sendWifi(fingerprint);
     }
