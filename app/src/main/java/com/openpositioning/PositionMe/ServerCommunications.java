@@ -12,6 +12,7 @@ import com.openpositioning.PositionMe.fragments.FilesFragment;
 import com.openpositioning.PositionMe.sensors.Observable;
 import com.openpositioning.PositionMe.sensors.Observer;
 import com.google.protobuf.util.JsonFormat;
+import com.openpositioning.PositionMe.sensors.SensorFusion;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -527,12 +528,12 @@ public class ServerCommunications implements Observable {
     public void notifyObservers(int index) {
         for(Observer o : observers) {
             if(index == 0 && o instanceof FilesFragment) {
-                o.updateWifi(new String[] {infoResponse});
+                o.updateServer(new String[] {infoResponse});
             }
             else if (index == 1 && o instanceof MainActivity) {
-                o.updateWifi(new Boolean[] {success});
+                o.updateServer(new Boolean[] {success});
             }
-            else if (index == 2 && o instanceof MainActivity) {
+            else if (index == 2 && o instanceof SensorFusion) {
                 o.updateServer(new Object[] {wifiresponse});
             }
         }
