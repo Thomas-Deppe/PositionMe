@@ -230,7 +230,9 @@ public class SensorFusion implements SensorEventListener, Observer {
         wifiProcessor.registerObserver(this);
         this.gnssProcessor = new GNSSDataProcessor(context,locationListener);
         // Create object handling HTTPS communication
-        this.serverCommunications = new ServerCommunications(context);
+        //this.serverCommunications = new ServerCommunications(context);
+        this.serverCommunications = ServerCommunications.getMainInstance();
+        this.serverCommunications.registerObserver(this);
         // Save absolute and relative start time
         this.absoluteStartTime = System.currentTimeMillis();
         this.bootTime = android.os.SystemClock.uptimeMillis();
@@ -345,6 +347,7 @@ public class SensorFusion implements SensorEventListener, Observer {
                 //Store time of step
                 long stepTime = android.os.SystemClock.uptimeMillis() - bootTime;
                 float[] newCords = this.pdrProcessing.updatePdr(stepTime, this.accelMagnitude, this.orientation[0]);
+                //Todo: update fusion processing algorithm
                 notifySensorUpdate(SensorFusionUpdates.update_type.PDR_UPDATE);
                 if (saveRecording) {
                     // Store the PDR coordinates for plotting the trajectory
@@ -405,7 +408,7 @@ public class SensorFusion implements SensorEventListener, Observer {
      */
     @Override
     public void updateServer(Object[] wifiList) {
-
+        //Todo: Call fusion processing update new wifi fingerprint
         // probably add a notify as a new
 
     }

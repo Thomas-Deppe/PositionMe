@@ -7,11 +7,11 @@ import android.net.NetworkInfo;
 
 import androidx.preference.PreferenceManager;
 
-import com.google.gson.JsonObject;
 import com.openpositioning.PositionMe.fragments.FilesFragment;
 import com.openpositioning.PositionMe.sensors.Observable;
 import com.openpositioning.PositionMe.sensors.Observer;
 import com.google.protobuf.util.JsonFormat;
+import com.openpositioning.PositionMe.sensors.SensorFusion;
 
 import org.json.JSONObject;
 
@@ -51,6 +51,9 @@ public class ServerCommunications implements Observable {
 
     // Application context for handling permissions and devices
     private final Context context;
+
+    private static ServerCommunications mainInstance;
+
     // Network status checking
     private ConnectivityManager connMgr;
     private boolean isWifiConn;
@@ -92,8 +95,9 @@ public class ServerCommunications implements Observable {
      *
      * @param context   application context for handling permissions and devices.
      */
-    public ServerCommunications(Context context) {
-        this.context = context;
+
+    private ServerCommunications(Context context) {
+        this.context = context.getApplicationContext();
         this.connMgr = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         this.settings = PreferenceManager.getDefaultSharedPreferences(context);
         this.isWifiConn = false;
@@ -101,6 +105,21 @@ public class ServerCommunications implements Observable {
         checkNetworkStatus();
 
         this.observers = new ArrayList<>();
+    }
+
+    public static ServerCommunications getMainInstance(Context context) {
+        if (mainInstance == null) {
+            mainInstance = new ServerCommunications(context);
+        }
+        return mainInstance;
+    }
+
+    // Optional: If you need a method to access the instance without passing context after initial setup
+    public static ServerCommunications getMainInstance() {
+        if (mainInstance == null) {
+            throw new IllegalStateException("ServerCommunications has not been initialized.");
+        }
+        return mainInstance;
     }
 
     /**
@@ -147,7 +166,7 @@ public class ServerCommunications implements Observable {
                     // Delete the local file and set success to false
                     //file.delete();
                     success = false;
-                    notifyObservers(2);
+                    //notifyObservers(2);
                 }
 
                 // Process the server's response
@@ -522,12 +541,12 @@ public class ServerCommunications implements Observable {
     public void notifyObservers(int index) {
         for(Observer o : observers) {
             if(index == 0 && o instanceof FilesFragment) {
-                o.updateWifi(new String[] {infoResponse});
+                o.updateServer(new String[] {infoResponse});
             }
             else if (index == 1 && o instanceof MainActivity) {
-                o.updateWifi(new Boolean[] {success});
+                o.updateServer(new Boolean[] {success});
             }
-            else if (index == 2 && o instanceof MainActivity) { // for the
+            else if (index == 2 && o instanceof SensorFusion) { // for the
                 o.updateServer(new Boolean[] {success});
             }
         }

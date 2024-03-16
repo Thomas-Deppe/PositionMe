@@ -69,6 +69,7 @@ public class MainActivity extends AppCompatActivity implements Observer {
 
     private SharedPreferences settings;
     private SensorFusion sensorFusion;
+    private ServerCommunications serverCommunications;
     private Handler httpResponseHandler;
 
     //endregion
@@ -529,9 +530,11 @@ public class MainActivity extends AppCompatActivity implements Observer {
      */
     private void allPermissionsObtained() {
         settings.edit().putBoolean("permanentDeny", false).apply();
+        this.serverCommunications = ServerCommunications.getMainInstance(getApplicationContext());
+        this.serverCommunications.registerObserver(this);
         this.sensorFusion = SensorFusion.getInstance();
         this.sensorFusion.setContext(getApplicationContext());
-        sensorFusion.registerForServerUpdate(this);
+        //sensorFusion.registerForServerUpdate(this);
     }
 
     //endregion
@@ -604,13 +607,7 @@ public class MainActivity extends AppCompatActivity implements Observer {
      */
     @Override
     public void updateWifi(Object[] objList) {
-        assert objList[0] instanceof Boolean;
-        if((Boolean) objList[0]) {
-            this.httpResponseHandler.post(displayToastTaskSuccess);
-        }
-        else {
-            this.httpResponseHandler.post(displayToastTaskFailure);
-        }
+        return;
     }
 
     /**

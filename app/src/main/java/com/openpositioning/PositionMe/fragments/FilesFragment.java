@@ -71,7 +71,8 @@ public class FilesFragment extends Fragment implements Observer {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        serverCommunications = new ServerCommunications(getActivity());
+        //serverCommunications = new ServerCommunications(getActivity());
+        serverCommunications = ServerCommunications.getMainInstance();
         serverCommunications.registerObserver(this);
     }
 
@@ -127,7 +128,7 @@ public class FilesFragment extends Fragment implements Observer {
      *                              response from the server.
      */
     @Override
-    public void updateWifi(Object[] singletonStringList) {
+    public void updateServer(Object[] singletonStringList) {
         // Cast input as a string
         String infoString = (String) singletonStringList[0];
         // Check if the string is non-null and non-empty before processing
@@ -152,7 +153,7 @@ public class FilesFragment extends Fragment implements Observer {
      *                              response from the server.
      */
     @Override
-    public void updateServer(Object[] singletonStringList) {
+    public void updateWifi(Object[] singletonStringList) {
         return;
     }
 
