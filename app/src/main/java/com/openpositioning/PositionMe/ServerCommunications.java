@@ -551,7 +551,7 @@ public class ServerCommunications implements Observable {
             else if (index == 1 && o instanceof MainActivity) {
                 o.updateServer(new Boolean[] {success});
             }
-            else if (index == 2 && o instanceof SensorFusion) { 
+            else if (index == 2 && o instanceof SensorFusion) {
                 o.updateServer(new Object[] {wifiresponse});
             }
         }

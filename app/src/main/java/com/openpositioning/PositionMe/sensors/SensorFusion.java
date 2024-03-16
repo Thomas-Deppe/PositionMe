@@ -14,6 +14,7 @@ import android.util.Log;
 
 import androidx.preference.PreferenceManager;
 
+import com.google.android.gms.maps.model.LatLng;
 import com.google.gson.JsonObject;
 import com.openpositioning.PositionMe.MainActivity;
 import com.openpositioning.PositionMe.PathView;
@@ -347,7 +348,11 @@ public class SensorFusion implements SensorEventListener, Observer {
                 //Store time of step
                 long stepTime = android.os.SystemClock.uptimeMillis() - bootTime;
                 float[] newCords = this.pdrProcessing.updatePdr(stepTime, this.accelMagnitude, this.orientation[0]);
-                //Todo: update fusion processing algorithm
+
+                //update fusion processing algorithm with new PDR
+                this.fusionProcessing.updateFusionPDR();
+
+                // PDR to display
                 notifySensorUpdate(SensorFusionUpdates.update_type.PDR_UPDATE);
                 if (saveRecording) {
                     // Store the PDR coordinates for plotting the trajectory
@@ -393,6 +398,7 @@ public class SensorFusion implements SensorEventListener, Observer {
                             .setSpeed(speed)
                             .setProvider(provider)
                             .setRelativeTimestamp(System.currentTimeMillis()-absoluteStartTime));
+                    fusionProcessing.updateFusionGNSS(latitude, longitude, altitude, GNSS_accuracy);
                     notifySensorUpdate(SensorFusionUpdates.update_type.GNSS_UPDATE);
                 }
             }
@@ -406,11 +412,25 @@ public class SensorFusion implements SensorEventListener, Observer {
      *
      * @see ServerCommunications for more information abour notify Observables.
      */
-    @Override
-    public void updateServer(Object[] wifiList) {
-        //Todo: Call fusion processing update new wifi fingerprint
-        // probably add a notify as a new
+    public void onFusionAlgComplete(LatLng fusionpos){
 
+        //to do: make a global variable: fusionposition = fusionpos;
+        // update the displayed trajectory
+        notifySensorUpdate(SensorFusionUpdates.update_type.FUSION_UPDATE);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Receives updates from {@link ServerCommunications}.
+     *
+     * @see ServerCommunications for more information abour notify Observables.
+     */
+    @Override
+    public void updateServer(Object[] responseList) {
+        //update fusion processing with new wifi fingerprint
+        JSONObject wifiresponse = (JSONObject) responseList[0];
+        this.fusionProcessing.updateFusionWifi(wifiresponse);
     }
 
 
@@ -699,6 +719,9 @@ public class SensorFusion implements SensorEventListener, Observer {
                     break;
                 case GNSS_UPDATE:
                     observer.onGNSSUpdate();
+                    break;
+                case FUSION_UPDATE:
+                    observer.onFusionUpdate();
                     break;
             }
         }
