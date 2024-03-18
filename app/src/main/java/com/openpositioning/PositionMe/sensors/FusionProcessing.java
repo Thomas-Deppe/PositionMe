@@ -34,9 +34,9 @@ public class FusionProcessing {
 
     public FusionProcessing() {
         // todo - HELP- the following only once at the start
-        this.sensorFusion = SensorFusion.getInstance();
-        startPosition = sensorFusion.getGNSSLatLngAlt(true);
-        ecefRefCoords = CoordinateTransform.geodeticToEcef(startPosition[0],startPosition[1], startPosition[2]);
+//        this.sensorFusion = SensorFusion.getInstance();
+//        startPosition = sensorFusion.getGNSSLatLngAlt(true);
+//        ecefRefCoords = CoordinateTransform.geodeticToEcef(startPosition[0],startPosition[1], startPosition[2]);
     }
 
     //Todo: Add Outlier Detection
@@ -112,6 +112,7 @@ public class FusionProcessing {
         double[] pdrValues = sensorFusion.getCurrentPDRCalc();
         float elevationVal = sensorFusion.getElevation();
         //Transform the ENU coordinates to WSG84 coordinates google maps uses
+        sensorFusion.getGNSSLatitude(true);
         positionPDR = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startPosition[0], startPosition[1], ecefRefCoords);
 
         // call fusion algorithm
