@@ -352,7 +352,7 @@ public class SensorFusion implements SensorEventListener, Observer {
                 this.updateFusionPDR();
 
                 // PDR to display
-                x(SensorFusionUpdates.update_type.PDR_UPDATE);
+                notifySensorUpdate(SensorFusionUpdates.update_type.PDR_UPDATE);
                 if (saveRecording) {
                     // Store the PDR coordinates for plotting the trajectory
                     this.pathView.drawTrajectory(newCords);
