@@ -76,7 +76,10 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     //Stores the map displayed
     private GoogleMap recording_map;
     //Stores the polyline of the users path so that it can be updated without the need to redraw the entire polyline
-    private Polyline user_trajectory;
+    private Polyline user_trajectory; // this shows the pdr trajectory
+    private Polyline trajectory_wifi;
+    private Polyline trajectory_fusion;
+    private Polyline trajectory_gnss;
     //Zoom of google maps
     private float zoom = 19f;
     //Button to end PDR recording
@@ -192,6 +195,9 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     .title("User Position"));
             recording_map.animateCamera(CameraUpdateFactory.newLatLngZoom(position, zoom ));
             user_trajectory = recording_map.addPolyline(new PolylineOptions().add(position));
+            trajectory_gnss = recording_map.addPolyline(new PolylineOptions().add(position));
+            trajectory_wifi = recording_map.addPolyline(new PolylineOptions().add(position));
+            trajectory_fusion = recording_map.addPolyline(new PolylineOptions().add(position));
             buildingManager = new BuildingManager(recording_map);
             currentPosition = position;
             checkBuildingBounds(currentPosition);
@@ -468,16 +474,17 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
      * It retrieves all values from {@link SensorFusion}
      */
     @Override
-    public void onGNSSUpdate(){
+    public void onFusionUpdate(LatLng fusionAlgPosition){
+        // todo: display new point on the map -- fusion trajectory
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (showGNSS!= null && showGNSS.isChecked()){
-                    updateGNSSInfo();
-                }
+                updateFusionTrajectory(fusionAlgPosition);
             }
         });
     }
+
+
     /**
      * An overridden {@link SensorFusionUpdates} that is called as soon as the device receives a new GNSS update. If the showGNSS button is toggled to on,
      * then GNSS data is displayed on the screen.
@@ -485,10 +492,17 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
      * It retrieves all values from {@link SensorFusion}
      */
     @Override
-    public void onFusionUpdate(){
-        // todo: display new point on the map -- fusion trajectory
+    public void onGNSSUpdate(){
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (showGNSS!= null && showGNSS.isChecked()){
+                    updateGNSSInfo();
+                    updateGNSSTrajectory(new LatLng(currentPosition.latitude, currentPosition.longitude));
+                }
+            }
+        });
     }
-
     /**
      * If the show GNSS button is toggle to on then this method will retrieve the GNSS coordinates and update the map with a marker showing the new GNSS position.
      * The accuracy of the GNSS position is then displayed in the settings along with the positioning error of the GNSS location relative to the calculated PDR location.
@@ -527,6 +541,23 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     }
 
     /**
+     * An overridden {@link SensorFusionUpdates} that is called as soon as the device receives a new GNSS update. If the showGNSS button is toggled to on,
+     * then GNSS data is displayed on the screen.
+     *
+     * It retrieves all values from {@link SensorFusion}
+     */
+    @Override
+    public void onWifiUpdate(LatLng latlngFromWifiServer){
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                updateWifiTrajectory(latlngFromWifiServer);
+            }
+        });
+    }
+
+
+    /**
      * A helper function to update the path drawn on the screen with a new position, without the need to redraw teh entire path.
      *
      * @param point The new coordinate to add to the users path.
@@ -536,6 +567,30 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             List<LatLng> points = user_trajectory.getPoints();
             points.add(point);
             user_trajectory.setPoints(points);
+        }
+    }
+
+    private void updateWifiTrajectory (LatLng point){
+        if (trajectory_wifi != null) {
+            List<LatLng> points = trajectory_wifi.getPoints();
+            points.add(point);
+            trajectory_wifi.setPoints(points);
+        }
+    }
+
+    private void updateGNSSTrajectory (LatLng point){
+        if (trajectory_gnss != null) {
+            List<LatLng> points = trajectory_gnss.getPoints();
+            points.add(point);
+            trajectory_gnss.setPoints(points);
+        }
+    }
+
+    private void updateFusionTrajectory (LatLng point){
+        if (trajectory_fusion != null) {
+            List<LatLng> points = trajectory_fusion.getPoints();
+            points.add(point);
+            trajectory_fusion.setPoints(points);
         }
     }
 
