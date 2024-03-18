@@ -411,11 +411,11 @@ public class SensorFusion implements SensorEventListener, Observer {
      *
      * @see ServerCommunications for more information abour notify Observables.
      */
-    public void onFusionAlgComplete(LatLng fusionpos){
+    public void onFusionAlgComplete(){
 
-        //to do: make a global variable: fusionposition = fusionpos;
-        // update the displayed trajectory
+        // store the new position as a global LatLng
         positionFusion = new LatLng(posReturnFusion[0], posReturnFusion[1]);
+        // update the displayed trajectory
         notifySensorUpdate(SensorFusionUpdates.update_type.FUSION_UPDATE);
     }
 
