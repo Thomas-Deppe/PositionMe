@@ -1018,7 +1018,7 @@ public class SensorFusion implements SensorEventListener, Observer {
     private double[] startPosition = new double[3];
     private double[] ecefRefCoords = new double[3];
 
-    private LatLng positionPDR, positionWifi, positionGNNS;
+//    private LatLng positionPDR, positionWifi, positionGNNS;
 
 
 
@@ -1094,28 +1094,43 @@ public class SensorFusion implements SensorEventListener, Observer {
         // calculate new PDR, save as global variable
         double[] pdrValues = sensorFusion.getCurrentPDRCalc();
         float elevationVal = sensorFusion.getElevation();
+
         //Transform the ENU coordinates to WSG84 coordinates google maps uses
         sensorFusion.getGNSSLatitude(true);
-        // local
-        positionPDR = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startPosition[0], startPosition[1], ecefRefCoords);
 
-        // call fusion algorithm
-//         particlefilter.update(double positionPDR.latitude, doube)
+        // local PDR LatLn point
+        LatLng positionPDR = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startPosition[0], startPosition[1], ecefRefCoords);
+        double latitude = positionPDR.latitude;
+        double longitude = positionPDR.longitude;
+
+        // call fusion algorithm arg(double, double)
+//        particlefilter.update(latitude, longitude);
     }
 
     public void updateFusionWifi(JSONObject wifiresponse){
 
-        // TODO: decode the new Wifi LatLng from JSON, save as global variable
-        // positionWifi =
+        try {
+            double latitude = wifiresponse.getDouble("lat");
+            double longitude = wifiresponse.getDouble("long");
+            double floor = wifiresponse.getDouble("floor");
 
-        // call fusion algorithm
+            // todo: error checking
+            // call fusion algorithm arg(double, double)
+//        particlefilter.update(latitude, longitude);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
     }
     public void updateFusionGNSS(double latitude,double longitude,double altitude,float GNSS_accuracy){
 
         // use the parameter values to get the LatLng
-        positionGNNS = new LatLng(latitude, longitude);
+        LatLng positionGNNS = new LatLng(latitude, longitude);
 
         // call fusion algorithm
+//        particlefilter.update(latitude, longitude);
+
     }
 
 }
