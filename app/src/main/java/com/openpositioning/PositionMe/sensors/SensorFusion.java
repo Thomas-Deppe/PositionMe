@@ -14,7 +14,9 @@ import android.util.Log;
 
 import androidx.preference.PreferenceManager;
 
+import com.google.android.gms.maps.model.LatLng;
 import com.google.gson.JsonObject;
+import com.openpositioning.PositionMe.CoordinateTransform;
 import com.openpositioning.PositionMe.MainActivity;
 import com.openpositioning.PositionMe.PathView;
 import com.openpositioning.PositionMe.PdrProcessing;
@@ -26,6 +28,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -97,8 +100,6 @@ public class SensorFusion implements SensorEventListener, Observer {
     // Trajectory object containing all data
     private Traj.Trajectory.Builder trajectory;
 
-    private FusionProcessing fusionProcessing;
-
     // Settings
     private boolean saveRecording;
     private float filter_coefficient;
@@ -161,7 +162,6 @@ public class SensorFusion implements SensorEventListener, Observer {
         // Timer to store sensor values in the trajectory object
         this.storeTrajectoryTimer = new Timer();
 
-        this.fusionProcessing = new FusionProcessing();
         // Counters to track elements with slower frequency
         this.counter = 0;
         this.secondCounter = 0;
@@ -347,7 +347,11 @@ public class SensorFusion implements SensorEventListener, Observer {
                 //Store time of step
                 long stepTime = android.os.SystemClock.uptimeMillis() - bootTime;
                 float[] newCords = this.pdrProcessing.updatePdr(stepTime, this.accelMagnitude, this.orientation[0]);
-                //Todo: update fusion processing algorithm
+
+                //update fusion processing algorithm with new PDR
+                this.updateFusionPDR();
+
+                // PDR to display
                 notifySensorUpdate(SensorFusionUpdates.update_type.PDR_UPDATE);
                 if (saveRecording) {
                     // Store the PDR coordinates for plotting the trajectory
@@ -393,6 +397,7 @@ public class SensorFusion implements SensorEventListener, Observer {
                             .setSpeed(speed)
                             .setProvider(provider)
                             .setRelativeTimestamp(System.currentTimeMillis()-absoluteStartTime));
+                    updateFusionGNSS(latitude, longitude, altitude, GNSS_accuracy);
                     notifySensorUpdate(SensorFusionUpdates.update_type.GNSS_UPDATE);
                 }
             }
@@ -406,11 +411,25 @@ public class SensorFusion implements SensorEventListener, Observer {
      *
      * @see ServerCommunications for more information abour notify Observables.
      */
-    @Override
-    public void updateServer(Object[] wifiList) {
-        //Todo: Call fusion processing update new wifi fingerprint
-        // probably add a notify as a new
+    public void onFusionAlgComplete(LatLng fusionpos){
 
+        //to do: make a global variable: fusionposition = fusionpos;
+        // update the displayed trajectory
+        notifySensorUpdate(SensorFusionUpdates.update_type.FUSION_UPDATE);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * Receives updates from {@link ServerCommunications}.
+     *
+     * @see ServerCommunications for more information abour notify Observables.
+     */
+    @Override
+    public void updateServer(Object[] responseList) {
+        //update fusion processing with new wifi fingerprint
+        JSONObject wifiresponse = (JSONObject) responseList[0];
+        updateFusionWifi(wifiresponse);
     }
 
 
@@ -437,7 +456,7 @@ public class SensorFusion implements SensorEventListener, Observer {
             this.trajectory.addWifiData(wifiData);
 
             try {
-                JSONObject jsonfingerprint = this.fusionProcessing.toJson(this.wifiList);
+                JSONObject jsonfingerprint = toJson(this.wifiList);
                 String jsonString = jsonfingerprint.toString();
                 Log.d("WIFI JSON: ", jsonString);
                 sendWifiJsonToCloud(jsonfingerprint);
@@ -445,7 +464,7 @@ public class SensorFusion implements SensorEventListener, Observer {
                 e.printStackTrace();
             }
 
-            this.fusionProcessing.detectOutliers(this.wifiList);
+            detectOutliers(this.wifiList);
         }
     }
 
@@ -699,6 +718,9 @@ public class SensorFusion implements SensorEventListener, Observer {
                     break;
                 case GNSS_UPDATE:
                     observer.onGNSSUpdate();
+                    break;
+                case FUSION_UPDATE:
+                    observer.onFusionUpdate();
                     break;
             }
         }
@@ -987,5 +1009,128 @@ public class SensorFusion implements SensorEventListener, Observer {
     }
 
     //endregion
+
+    // region copied from FUSION PROCESSING
+    private static final double outlier_threshold = 3.0;
+    private static final double zScoreFactor = 0.6745;
+
+    //Variables to store the users starting position.
+    private double[] startPosition = new double[3];
+    private double[] ecefRefCoords = new double[3];
+
+//    private LatLng positionPDR, positionWifi, positionGNNS;
+
+
+
+    //Todo: Add Outlier Detection
+
+    public void detectOutliers(List<Wifi> wifiList) {
+
+        if (wifiList.isEmpty()){
+            return;
+        }
+
+        int [] wifiData = wifiList.stream().mapToInt(Wifi::getLevel).toArray();
+        double median = calculateMedian(wifiData);
+        double MAD = calculateMAD(wifiData, median);
+        Log.d("DETECT_OUTLIERS", "Median = "+median+" MAD = "+MAD);
+
+        for (int i = 0; i <wifiData.length; i++){
+            double modifiedZscore = zScoreFactor*((Math.abs(wifiData[i] - median)) / MAD);
+            if (modifiedZscore > outlier_threshold) {
+                Log.d("DETECT_OUTLIERS", "Outlier detected: " + wifiData[i] + " with modified z-score: " + modifiedZscore);
+            }
+        }
+
+    }
+
+    private static double calculateMedian(int[] wifiList) {
+        int[] rssiValues = wifiList;
+        Arrays.sort(rssiValues);
+        int size = rssiValues.length;
+        if (size % 2 != 0) {
+            return rssiValues[size / 2];
+        } else {
+            return (rssiValues[(size - 1) / 2] + rssiValues[size / 2]) / 2.0;
+        }
+    }
+
+    private static double calculateMedian(double[] wifiList) {
+        double[] rssiValues = wifiList;
+        Arrays.sort(rssiValues);
+        int size = rssiValues.length;
+        if (size % 2 != 0) {
+            return rssiValues[size / 2];
+        } else {
+            return (rssiValues[(size - 1) / 2] + rssiValues[size / 2]) / 2.0;
+        }
+    }
+
+    private static double calculateMAD(int[] deviations, double median) {
+        double[] absoluteDeviations = new double[deviations.length];
+        for (int i = 0; i < deviations.length; i++) {
+            absoluteDeviations[i] = Math.abs(deviations[i] - median);
+        }
+        return calculateMedian(absoluteDeviations);
+    }
+
+    public JSONObject toJson(List<Wifi> wifiList) throws JSONException {
+        JSONObject json = new JSONObject();
+        JSONObject fingerprint = new JSONObject();
+        for (Wifi data : wifiList){
+            String bssid = Long.toString(data.getBssid());
+            System.out.println(bssid);
+            fingerprint.put(bssid, data.getLevel());
+        }
+
+        json.put("wf", fingerprint);
+
+        return json;
+    }
+
+    // block for structure
+    public void updateFusionPDR(){
+
+        // calculate new PDR, save as global variable
+        double[] pdrValues = sensorFusion.getCurrentPDRCalc();
+        float elevationVal = sensorFusion.getElevation();
+
+        //Transform the ENU coordinates to WSG84 coordinates google maps uses
+        sensorFusion.getGNSSLatitude(true);
+
+        // local PDR LatLn point
+        LatLng positionPDR = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startPosition[0], startPosition[1], ecefRefCoords);
+        double latitude = positionPDR.latitude;
+        double longitude = positionPDR.longitude;
+
+        // call fusion algorithm arg(double, double)
+//        particlefilter.update(latitude, longitude);
+    }
+
+    public void updateFusionWifi(JSONObject wifiresponse){
+
+        try {
+            double latitude = wifiresponse.getDouble("lat");
+            double longitude = wifiresponse.getDouble("long");
+            double floor = wifiresponse.getDouble("floor");
+
+            // todo: error checking
+            // call fusion algorithm arg(double, double)
+//        particlefilter.update(latitude, longitude);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+    }
+    public void updateFusionGNSS(double latitude,double longitude,double altitude,float GNSS_accuracy){
+
+        // use the parameter values to get the LatLng
+        LatLng positionGNNS = new LatLng(latitude, longitude);
+
+        // call fusion algorithm
+//        particlefilter.update(latitude, longitude);
+
+    }
 
 }

@@ -13,6 +13,7 @@ import com.openpositioning.PositionMe.sensors.Observer;
 import com.google.protobuf.util.JsonFormat;
 import com.openpositioning.PositionMe.sensors.SensorFusion;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
@@ -63,6 +64,8 @@ public class ServerCommunications implements Observable {
     private String infoResponse;
     private boolean success;
     private List<Observer> observers;
+
+    private JSONObject wifiresponse;
 
 
     // Static constants necessary for communications
@@ -163,8 +166,6 @@ public class ServerCommunications implements Observable {
                 @Override public void onFailure(Call call, IOException e) {
                     e.printStackTrace();
                     System.err.println("Failure to get response");
-                    // Delete the local file and set success to false
-                    //file.delete();
                     success = false;
                     //notifyObservers(2);
                 }
@@ -189,8 +190,12 @@ public class ServerCommunications implements Observable {
                         // Print a confirmation of a successful POST to API
                         System.out.println("Successful post response: " + responseBody.string());
 
-                        // Delete local file and set success to true
+                        // assign the response to a global variable
+                        wifiresponse = new JSONObject(responseBody.string());
                         notifyObservers(2);
+
+                    } catch (JSONException e) {
+                        e.printStackTrace();
                     }
                 }
             });
@@ -546,8 +551,8 @@ public class ServerCommunications implements Observable {
             else if (index == 1 && o instanceof MainActivity) {
                 o.updateServer(new Boolean[] {success});
             }
-            else if (index == 2 && o instanceof SensorFusion) { // for the
-                o.updateServer(new Boolean[] {success});
+            else if (index == 2 && o instanceof SensorFusion) {
+                o.updateServer(new Object[] {wifiresponse});
             }
         }
     }

@@ -478,6 +478,16 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             }
         });
     }
+    /**
+     * An overridden {@link SensorFusionUpdates} that is called as soon as the device receives a new GNSS update. If the showGNSS button is toggled to on,
+     * then GNSS data is displayed on the screen.
+     *
+     * It retrieves all values from {@link SensorFusion}
+     */
+    @Override
+    public void onFusionUpdate(){
+        // todo: display new point on the map -- fusion trajectory
+    }
 
     /**
      * If the show GNSS button is toggle to on then this method will retrieve the GNSS coordinates and update the map with a marker showing the new GNSS position.
