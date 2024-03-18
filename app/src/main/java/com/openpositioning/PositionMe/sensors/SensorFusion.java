@@ -411,9 +411,10 @@ public class SensorFusion implements SensorEventListener, Observer {
      *
      * @see ServerCommunications for more information abour notify Observables.
      */
-    public void onFusionAlgComplete(LatLng fusionpos){
+    public void onFusionAlgComplete(){
 
-        //to do: make a global variable: fusionposition = fusionpos;
+        // store the new position as a global LatLng
+        positionFusion = new LatLng(posReturnFusion[0], posReturnFusion[1]);
         // update the displayed trajectory
         notifySensorUpdate(SensorFusionUpdates.update_type.FUSION_UPDATE);
     }
@@ -720,8 +721,10 @@ public class SensorFusion implements SensorEventListener, Observer {
                     observer.onGNSSUpdate();
                     break;
                 case FUSION_UPDATE:
-                    observer.onFusionUpdate();
+                    observer.onFusionUpdate(positionFusion);
                     break;
+                case WIFI_UPDATE:
+                    observer.onWifiUpdate(positionWifi);
             }
         }
     }
@@ -1018,7 +1021,9 @@ public class SensorFusion implements SensorEventListener, Observer {
     private double[] startPosition = new double[3];
     private double[] ecefRefCoords = new double[3];
 
-//    private LatLng positionPDR, positionWifi, positionGNNS;
+    private LatLng positionWifi; // stores the most recent LatLng point returned from server
+    private LatLng positionFusion; // stores the most recent LatLng point calculated by the Fusion Algorithm
+    private double[] posReturnFusion;
 
 
 
@@ -1104,7 +1109,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         double longitude = positionPDR.longitude;
 
         // call fusion algorithm arg(double, double)
-//        particlefilter.update(latitude, longitude);
+//        posReturnFusion = particlefilter.update(latitude, longitude);
     }
 
     public void updateFusionWifi(JSONObject wifiresponse){
@@ -1113,10 +1118,14 @@ public class SensorFusion implements SensorEventListener, Observer {
             double latitude = wifiresponse.getDouble("lat");
             double longitude = wifiresponse.getDouble("long");
             double floor = wifiresponse.getDouble("floor");
+            positionWifi = new LatLng(latitude, longitude);
 
             // todo: error checking
             // call fusion algorithm arg(double, double)
-//        particlefilter.update(latitude, longitude);
+//        posReturnFusion = particlefilter.update(latitude, longitude);
+
+            // display the position on UI
+            notifySensorUpdate(SensorFusionUpdates.update_type.WIFI_UPDATE);
 
         } catch (JSONException e) {
             e.printStackTrace();
@@ -1129,8 +1138,8 @@ public class SensorFusion implements SensorEventListener, Observer {
         LatLng positionGNNS = new LatLng(latitude, longitude);
 
         // call fusion algorithm
-//        particlefilter.update(latitude, longitude);
-
+//        posReturnFusion = particlefilter.update(latitude, longitude);
     }
+
 
 }
