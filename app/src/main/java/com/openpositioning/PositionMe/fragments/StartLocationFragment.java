@@ -158,6 +158,8 @@ public class StartLocationFragment extends Fragment {
                 // Set the start location obtained
                 sensorFusion.setStartGNSSLatitude(startPosition);
                 sensorFusion.setStartGNSSLatLngAlt(startRef);
+                sensorFusion.initialiseParticleFilter(startRef[0], startRef[1]);
+
                 // Navigate to the RecordingFragment
                 NavDirections action = StartLocationFragmentDirections.actionStartLocationFragmentToRecordingFragment();
                 Navigation.findNavController(view).navigate(action);
