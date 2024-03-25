@@ -1135,11 +1135,9 @@ public class SensorFusion implements SensorEventListener, Observer {
             // display the position on UI
             notifySensorUpdate(SensorFusionUpdates.update_type.WIFI_UPDATE);
 
-            // todo: error checking
-            // call fusion algorithm arg(double, double)
-//        posReturnFusion = particlefilter.update(latitude, longitude);
-
-            SensorFusion.getInstance().notifySensorUpdate(SensorFusionUpdates.update_type.FUSION_UPDATE);
+            // todo: error checking - in case the latlng are 0,0
+            // call fusion algorithm
+            // particlefilter.update(latitude, longitude);
 
         } catch (JSONException e) {
             e.printStackTrace();
