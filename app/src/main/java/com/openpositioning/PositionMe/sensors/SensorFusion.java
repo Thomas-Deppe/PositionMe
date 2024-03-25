@@ -730,6 +730,18 @@ public class SensorFusion implements SensorEventListener, Observer {
     }
 
     /**
+     * A helper method used to notify all observers that an update is available.
+     *
+     * change to void
+     * sensorfusion.getinstance.notifyFusionUpdate(calculated LatLNG)
+     */
+    public void notifyFusionUpdate(LatLng fusion_pos){
+        for (SensorFusionUpdates observer : recordingUpdates) {
+            observer.onFusionUpdate(fusion_pos);
+        }
+    }
+
+    /**
      * Registers the caller observer to receive updates from the server instance.
      * Necessary when classes want to act on a trajectory being successfully or unsuccessfully send
      * to the server. This grants access to observing the {@link ServerCommunications} instance
@@ -1120,12 +1132,14 @@ public class SensorFusion implements SensorEventListener, Observer {
             double floor = wifiresponse.getDouble("floor");
             positionWifi = new LatLng(latitude, longitude);
 
+            // display the position on UI
+            notifySensorUpdate(SensorFusionUpdates.update_type.WIFI_UPDATE);
+
             // todo: error checking
             // call fusion algorithm arg(double, double)
 //        posReturnFusion = particlefilter.update(latitude, longitude);
 
-            // display the position on UI
-            notifySensorUpdate(SensorFusionUpdates.update_type.WIFI_UPDATE);
+            SensorFusion.getInstance().notifySensorUpdate(SensorFusionUpdates.update_type.FUSION_UPDATE);
 
         } catch (JSONException e) {
             e.printStackTrace();
