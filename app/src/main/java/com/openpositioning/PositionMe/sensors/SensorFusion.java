@@ -433,9 +433,8 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void updateServer(Object[] responseList) {
         //update fusion processing with new wifi fingerprint
         JSONObject wifiresponse = (JSONObject) responseList[0];
-        System.out.println("server reponse:");
-        System.out.println(wifiresponse);
-//        updateFusionWifi(wifiresponse);
+        System.out.println("server reponse: "+ wifiresponse);
+        updateFusionWifi(wifiresponse);
     }
 
 
@@ -1101,7 +1100,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         JSONObject fingerprint = new JSONObject();
         for (Wifi data : wifiList){
             String bssid = Long.toString(data.getBssid());
-            System.out.println(bssid);
+//            System.out.println(bssid);
             fingerprint.put(bssid, data.getLevel());
         }
 
@@ -1132,11 +1131,13 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void updateFusionWifi(JSONObject wifiresponse){
 
         try {
+            System.out.println("===== in update particle fusion ====");
+
             double latitude = wifiresponse.getDouble("lat");
-            double longitude = wifiresponse.getDouble("long");
+            double longitude = wifiresponse.getDouble("lon");
             double floor = wifiresponse.getDouble("floor");
             positionWifi = new LatLng(latitude, longitude);
-
+            System.out.println(latitude + ", "+  longitude);
             // display the position on UI
             notifySensorUpdate(SensorFusionUpdates.update_type.WIFI_UPDATE);
 

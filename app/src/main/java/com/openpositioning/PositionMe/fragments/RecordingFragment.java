@@ -26,6 +26,7 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
@@ -204,10 +205,10 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             trajectory_fusion = recording_map.addPolyline(new PolylineOptions().add(position));
 
             // setting different colur of the polylines
-//            user_trajectory.setColor(Color.BLUE);
-//            trajectory_wifi.setColor(Color.GREEN);
-//            trajectory_gnss.setColor(Color.RED);
-//            trajectory_fusion.setColor(Color.YELLOW);
+            user_trajectory.setColor(Color.BLUE);
+            trajectory_wifi.setColor(Color.GREEN);
+            trajectory_gnss.setColor(Color.RED);
+            trajectory_fusion.setColor(Color.YELLOW);
 
             buildingManager = new BuildingManager(recording_map);
             currentPosition = position;
@@ -396,6 +397,8 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             } else if (buildingManager.getCurrentBuilding().equals(Buildings.UNSPECIFIED)){
                 currentBuilding.setText(buildingManager.getCurrentBuilding().getBuildingName());
                 buildingManager.removeGroundOverlay();
+                // no coverage
+                Toast.makeText(getActivity(), "This area has no wifi coverage", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -413,7 +416,12 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     currentBuilding.setText(buildingManager.getCurrentBuilding().getBuildingName());
                     if (buildingManager.getCurrentBuilding().equals(Buildings.UNSPECIFIED)) {
                         buildingManager.removeGroundOverlay();
-                    } else {
+                        Toast.makeText(getActivity(), "This area has no wifi coverage", Toast.LENGTH_SHORT).show();
+                    }
+                    else if (buildingManager.getCurrentBuilding().equals(Buildings.CORRIDOR_NUCLEUS)){
+                        Toast.makeText(getActivity(), "This area has no wifi coverage", Toast.LENGTH_SHORT).show();
+                    }
+                    else {
                         buildingManager.addGroundOverlay();
                     }
                 }
@@ -875,5 +883,25 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
         recordingSettingsDialog.show();
 
+    }
+
+    /**
+     * increases the zoom and updates the Animate Camera to zoom in to the map
+     * @var positionCurr, zoom
+     * **/
+    public void setZoomInButton() {
+        zoom++;
+        if (!(recording_map == null)) {
+            recording_map.animateCamera(CameraUpdateFactory.newLatLngZoom(currentPosition, zoom));
+        }
+    }
+
+    /**
+     * decreases the zoom and updates the Animate Camera to zoom out of the map
+     * @var positionCurr, zoom
+     * **/
+    public void setZoomOutButton(){
+        zoom--;
+//        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(positionCurr, zoom ));
     }
 }
