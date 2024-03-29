@@ -189,15 +189,26 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             startPosition = sensorFusion.getGNSSLatLngAlt(true);
             ecefRefCoords = CoordinateTransform.geodeticToEcef(startPosition[0],startPosition[1], startPosition[2]);
             LatLng position = new LatLng(startPosition[0], startPosition[1]);
+
             //LatLng position = new LatLng(55.922431222785264, -3.1724382435880134);
             user_marker = recording_map.addMarker(new MarkerOptions()
                     .position(position)
                     .title("User Position"));
             recording_map.animateCamera(CameraUpdateFactory.newLatLngZoom(position, zoom ));
+
+
+            // instantiating the polylines on the map
             user_trajectory = recording_map.addPolyline(new PolylineOptions().add(position));
             trajectory_gnss = recording_map.addPolyline(new PolylineOptions().add(position));
             trajectory_wifi = recording_map.addPolyline(new PolylineOptions().add(position));
             trajectory_fusion = recording_map.addPolyline(new PolylineOptions().add(position));
+
+            // setting different colur of the polylines
+//            user_trajectory.setColor(Color.BLUE);
+//            trajectory_wifi.setColor(Color.GREEN);
+//            trajectory_gnss.setColor(Color.RED);
+//            trajectory_fusion.setColor(Color.YELLOW);
+
             buildingManager = new BuildingManager(recording_map);
             currentPosition = position;
             checkBuildingBounds(currentPosition);

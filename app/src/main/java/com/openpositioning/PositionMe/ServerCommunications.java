@@ -80,8 +80,9 @@ public class ServerCommunications implements Observable {
     private static final String infoRequestURL =
             "https://openpositioning.org/api/live/users/trajectories/" + userKey
                     + "?key=" + masterKey;
-    private static final String uploadWifiURL = "https://openpositioning.org/api/position/fine" + userKey
-                    + "?skip=0&limit=30&key=" + masterKey;
+    private static final String uploadWifiURL = "https://openpositioning.org/api/position/fine";
+            //+ userKey
+            //        + "/?key=" + masterKey; //?skip=0&limit=30&
     private static final String PROTOCOL_CONTENT_TYPE = "multipart/form-data";
     private static final String PROTOCOL_CONTENT_TYPE_FINGERPRINT = "application/json";
     private static final String PROTOCOL_ACCEPT_TYPE = "application/json";
