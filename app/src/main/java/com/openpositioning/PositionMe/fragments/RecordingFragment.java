@@ -26,6 +26,7 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
@@ -189,15 +190,26 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             startPosition = sensorFusion.getGNSSLatLngAlt(true);
             ecefRefCoords = CoordinateTransform.geodeticToEcef(startPosition[0],startPosition[1], startPosition[2]);
             LatLng position = new LatLng(startPosition[0], startPosition[1]);
+
             //LatLng position = new LatLng(55.922431222785264, -3.1724382435880134);
             user_marker = recording_map.addMarker(new MarkerOptions()
                     .position(position)
                     .title("User Position"));
             recording_map.animateCamera(CameraUpdateFactory.newLatLngZoom(position, zoom ));
+
+
+            // instantiating the polylines on the map
             user_trajectory = recording_map.addPolyline(new PolylineOptions().add(position));
             trajectory_gnss = recording_map.addPolyline(new PolylineOptions().add(position));
             trajectory_wifi = recording_map.addPolyline(new PolylineOptions().add(position));
             trajectory_fusion = recording_map.addPolyline(new PolylineOptions().add(position));
+
+            // setting different colur of the polylines
+            user_trajectory.setColor(Color.BLUE);
+            trajectory_wifi.setColor(Color.GREEN);
+            trajectory_gnss.setColor(Color.RED);
+            trajectory_fusion.setColor(Color.YELLOW);
+
             buildingManager = new BuildingManager(recording_map);
             currentPosition = position;
             checkBuildingBounds(currentPosition);
@@ -385,6 +397,8 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             } else if (buildingManager.getCurrentBuilding().equals(Buildings.UNSPECIFIED)){
                 currentBuilding.setText(buildingManager.getCurrentBuilding().getBuildingName());
                 buildingManager.removeGroundOverlay();
+                // no coverage
+                Toast.makeText(getActivity(), "This area has no wifi coverage", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -402,7 +416,12 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     currentBuilding.setText(buildingManager.getCurrentBuilding().getBuildingName());
                     if (buildingManager.getCurrentBuilding().equals(Buildings.UNSPECIFIED)) {
                         buildingManager.removeGroundOverlay();
-                    } else {
+                        Toast.makeText(getActivity(), "This area has no wifi coverage", Toast.LENGTH_SHORT).show();
+                    }
+                    else if (buildingManager.getCurrentBuilding().equals(Buildings.CORRIDOR_NUCLEUS)){
+                        Toast.makeText(getActivity(), "This area has no wifi coverage", Toast.LENGTH_SHORT).show();
+                    }
+                    else {
                         buildingManager.addGroundOverlay();
                     }
                 }
@@ -864,5 +883,25 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
         recordingSettingsDialog.show();
 
+    }
+
+    /**
+     * increases the zoom and updates the Animate Camera to zoom in to the map
+     * @var positionCurr, zoom
+     * **/
+    public void setZoomInButton() {
+        zoom++;
+        if (!(recording_map == null)) {
+            recording_map.animateCamera(CameraUpdateFactory.newLatLngZoom(currentPosition, zoom));
+        }
+    }
+
+    /**
+     * decreases the zoom and updates the Animate Camera to zoom out of the map
+     * @var positionCurr, zoom
+     * **/
+    public void setZoomOutButton(){
+        zoom--;
+//        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(positionCurr, zoom ));
     }
 }
