@@ -1,23 +1,33 @@
 package com.openpositioning.PositionMe;
-import com.google.android.gms.maps.model.LatLng;
-import com.openpositioning.PositionMe.sensors.SensorFusion;
 
+import com.google.android.gms.maps.model.LatLng;
 import java.util.Random;
 
 public class ParticleFilter {
     // Constants, may need to be tuned
-    private static final int NUM_PARTICLES = 1000;
-    private static final double PARTICLE_STD_DEV = 0.01; // Standard deviation for generating particles
+    private static final int NUM_PARTICLES = 100;
+    private static final double PARTICLE_STD_DEV = 0.0005; // Standard deviation for generating particles
 
     // Parameters
     private Particle[] particles;
     private final Random random;
-    private final double initialTrueLatitude;
-    private final double initialTrueLongitude;
+    private final double refLatitude;
+    private final double refLongitude;
+    private final double refAlt;
+    private final double initialTrueEasting;
+    private final double initialTrueNorthing;
+    private final double initialTrueAlt;
 
-    public ParticleFilter(double initialTrueLatitude, double initialTrueLongitude) {
-        this.initialTrueLatitude = initialTrueLatitude;
-        this.initialTrueLongitude = initialTrueLongitude;
+    public ParticleFilter(double startLat, double startLong) {
+        this.refLatitude = startLat;
+        this.refLongitude = startLong;
+        this.refAlt = 0;
+
+        double[] enucoords = CoordinateTransform.geodeticToEnu(refLatitude, refLongitude, refAlt, refLatitude, refLongitude, refAlt);
+        this.initialTrueEasting = enucoords[0];
+        this.initialTrueNorthing = enucoords[1];
+        this.initialTrueAlt = enucoords[2];
+
         particles = new Particle[NUM_PARTICLES];
         random = new Random();
 
@@ -26,9 +36,9 @@ public class ParticleFilter {
 
     private void initializeParticles() {
         for (int i = 0; i < NUM_PARTICLES; i++) {
-            double latitude = initialTrueLatitude + (random.nextGaussian() * PARTICLE_STD_DEV);
-            double longitude = initialTrueLongitude + (random.nextGaussian() * PARTICLE_STD_DEV);
-            particles[i] = new Particle(latitude, longitude, 1.0 / NUM_PARTICLES);
+            double easting = initialTrueEasting + (random.nextGaussian() * PARTICLE_STD_DEV);
+            double northing = initialTrueNorthing + (random.nextGaussian() * PARTICLE_STD_DEV);
+            particles[i] = new Particle(easting, northing, 1.0 / NUM_PARTICLES);
         }
     }
 
@@ -39,10 +49,10 @@ public class ParticleFilter {
         }
     }
 
-    private void updateMeasurementModel(double measuredLatitude, double measuredLongitude) {
+    private void updateMeasurementModel(double measuredEast, double measuredNorth) {
         // Update particle weights based on measurement likelihood
         for (Particle particle : particles) {
-            double probability = calculateDistanceProbability(measuredLatitude, measuredLongitude, particle.getLatitude(), particle.getLongitude());
+            double probability = calculateDistanceProbability(measuredEast, measuredNorth, particle.getEasting(), particle.getNorthing());
             particle.setWeight(particle.getWeight() * probability);
         }
 
@@ -56,9 +66,9 @@ public class ParticleFilter {
         }
     }
 
-    private double calculateDistanceProbability(double measuredLatitude, double measuredLongitude, double particleLatitude, double particleLongitude) {
+    private double calculateDistanceProbability(double measuredEast, double measuredNorth, double particleEast, double particleNorth) {
         // Example of a simple distance-based likelihood calculation
-        double distance = Math.sqrt(Math.pow(measuredLatitude - particleLatitude, 2) + Math.pow(measuredLongitude - particleLongitude, 2));
+        double distance = Math.sqrt(Math.pow(measuredEast - particleEast, 2) + Math.pow(measuredNorth - particleNorth, 2));
         return Math.exp(-0.5 * distance);
     }
 
@@ -81,57 +91,56 @@ public class ParticleFilter {
                     break;
                 }
             }
-            newParticles[i] = new Particle(particles[index].getLatitude(), particles[index].getLongitude(), 1.0 / NUM_PARTICLES);
+            newParticles[i] = new Particle(particles[index].getEasting(), particles[index].getNorthing(), 1.0 / NUM_PARTICLES);
         }
 
         particles = newParticles;
     }
 
-    public void update(double measuredLatitude, double measuredLongitude) {
+    public LatLng update(double measuredLat, double measuredLong) {
         updateMotionModel();
-        updateMeasurementModel(measuredLatitude, measuredLongitude);
+        double[] enucoords = CoordinateTransform.geodeticToEnu(measuredLat,measuredLong,refAlt,refLatitude,refLongitude,refAlt);
+        updateMeasurementModel(enucoords[0], enucoords[1]);
         resampleParticles();
-
-        // updates the observer - notifies the RecordingFragment
-        SensorFusion.getInstance().notifyFusionUpdate(predict());
+        return predict();
     }
 
     public LatLng predict() {
         // Not sure if this is needed, depends on how the calls are made
-        double estimatedLatitude = 0;
-        double estimatedLongitude = 0;
+        double estimatedEasting = 0;
+        double estimatedNorthing = 0;
 
         for (Particle particle : particles) {
-            estimatedLatitude += particle.getLatitude() * particle.getWeight();
-            estimatedLongitude += particle.getLongitude() * particle.getWeight();
+            estimatedEasting += particle.getEasting() * particle.getWeight();
+            estimatedNorthing += particle.getNorthing() * particle.getWeight();
         }
 
-        return new LatLng(estimatedLatitude, estimatedLongitude);
+        return CoordinateTransform.enuToGeodetic(estimatedEasting,estimatedNorthing,refAlt,initialTrueEasting,initialTrueNorthing, initialTrueAlt);
     }
 }
 
 class Particle {
-    private double latitude;
-    private double longitude;
+    private double easting;
+    private double northing;
     private double weight;
 
-    public Particle(double latitude, double longitude, double weight) {
-        this.latitude = latitude;
-        this.longitude = longitude;
+    public Particle(double easting, double northing, double weight) {
+        this.easting = easting;
+        this.northing = northing;
         this.weight = weight;
     }
 
-    public void update(double deltaLatitude, double deltaLongitude) {
-        this.latitude += deltaLatitude;
-        this.longitude += deltaLongitude;
+    public void update(double deltaEasting, double deltaNorthing) {
+        this.easting += deltaEasting;
+        this.northing += deltaNorthing;
     }
 
-    public double getLatitude() {
-        return latitude;
+    public double getEasting() {
+        return easting;
     }
 
-    public double getLongitude() {
-        return longitude;
+    public double getNorthing() {
+        return northing;
     }
 
     public double getWeight() {
