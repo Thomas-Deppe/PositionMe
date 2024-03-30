@@ -1,5 +1,7 @@
 package com.openpositioning.PositionMe.sensors;
 
+import android.util.Log;
+
 import com.google.android.gms.maps.model.LatLng;
 import com.openpositioning.PositionMe.CoordinateTransform;
 
@@ -46,19 +48,24 @@ public class ExtendedKalmanFilter {
     }
 
     private void updateFk(double theta_k, double step_k){
-        double cosTheta = Math.cos(theta_k);
-        double sinTheta = Math.sin(theta_k);
+        // Change angle so zero rad is east
+        double adaptedHeading = (Math.PI/2 - theta_k);
+        Log.d("EKF:", "update theta "+adaptedHeading);
+
+        double cosTheta = Math.cos(adaptedHeading);
+        double sinTheta = Math.sin(adaptedHeading);
 
         this.Fk = new SimpleMatrix(new double[][]{
                 {1, 0 , cosTheta, -step_k * sinTheta},
-                {0,1, sinTheta, step_k * cosTheta, 0},
-                {0,0,1,0},
-                {0,0,0,1}
+                {0, 1, sinTheta, step_k * cosTheta},
+                {0, 0, 1, 0},
+                {0, 0, 0, 1}
         });
     }
 
     public void predict(double theta_k, double step_k) {
         // Update Fk based on the current state
+        Log.d("EKF:", "Predicting... "+theta_k+" "+step_k);
         updateFk(theta_k, step_k);
 
         // Predict the state vector Xk
@@ -66,7 +73,7 @@ public class ExtendedKalmanFilter {
 
         // Predict the covariance matrix Pk
         this.Pk = Fk.mult(Pk).mult(Fk.transpose()).plus(Qk);
-        System.out.println("XK after predict: "+Xk.toString());
+        Log.d("EKF:", "XK after predict: "+Xk.toString());
     }
 
     public void update(double[] observation_k){
@@ -80,14 +87,16 @@ public class ExtendedKalmanFilter {
         Pk = Pk.minus(KalmanGain.mult(Hk).mult(Pk));
     }
 
-    public LatLng onObservationUpdate(double observe_x, double observe_y, double PDR_x, double PDR_y, double altitude){
+    public void onObservationUpdate(double observe_x, double observe_y, double PDR_x, double PDR_y, double altitude){
+        Log.d("EKF:", "Observed... X = "+observe_x+" Y = "+observe_y);
+        Log.d("EKF:", "PDR... X = "+PDR_x+" Y = "+PDR_y);
         double[] observation = new double[] {(observe_x - PDR_x), (observe_y - PDR_y)};
 
         update(observation);
-
-        System.out.println("XK after update: "+Xk.toString());
+        Log.d("EKF:", "XK after update: "+Xk.toString());
+        Log.d("EKF:", "X = "+Xk.get(0, 0) + " Y = "+Xk.get(1,0));
         double[] startPosition = SensorFusion.getInstance().getGNSSLatLngAlt(true);
         double[] ecefRefCoords = SensorFusion.getInstance().getEcefRefCoords();
-        return CoordinateTransform.enuToGeodetic(Xk.get(0, 0), Xk.get(1,0), altitude, startPosition[0], startPosition[1], ecefRefCoords);
+        SensorFusion.getInstance().notifyKalmanFilterUpdate(CoordinateTransform.enuToGeodetic(Xk.get(0, 0), Xk.get(1,0), altitude, startPosition[0], startPosition[1], ecefRefCoords));
     }
 }

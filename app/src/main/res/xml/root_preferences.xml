@@ -51,7 +51,6 @@
             android:min="50"/>
     </PreferenceCategory>
 
-
     <PreferenceCategory android:title="@string/building_def_title"
         app:icon="@drawable/ic_baseline_building_24">
 

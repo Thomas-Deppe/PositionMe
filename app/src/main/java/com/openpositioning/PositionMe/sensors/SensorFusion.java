@@ -406,7 +406,7 @@ public class SensorFusion implements SensorEventListener, Observer {
                             .setProvider(provider)
                             .setRelativeTimestamp(System.currentTimeMillis()-absoluteStartTime));
                     System.out.println("gnss has recorded a new point");
-                    updateFusionGNSS(latitude, longitude, altitude, GNSS_accuracy);
+                    updateFusionGNSS(latitude, longitude ,altitude);
                     notifySensorUpdate(SensorFusionUpdates.update_type.GNSS_UPDATE);
                 }
             }
@@ -427,8 +427,6 @@ public class SensorFusion implements SensorEventListener, Observer {
         System.out.println("server reponse: "+ wifiresponse);
         updateFusionWifi(wifiresponse);
     }
-
-
 
     /**
      * {@inheritDoc}
@@ -721,7 +719,7 @@ public class SensorFusion implements SensorEventListener, Observer {
                     observer.onGNSSUpdate();
                     break;
                 case KALMAN_UPDATE:
-                    observer.onKalmanUpdate(positionWifi);
+                    observer.onKalmanUpdate(positionKalman);
                     break;
                 case PARTICLE_UPDATE:
                     observer.onParticleUpdate(positionParticle);
@@ -1121,8 +1119,8 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void updateFusionPDR(){
 
         // calculate new PDR, save as global variable
-        double[] pdrValues = sensorFusion.getCurrentPDRCalc();
-        float elevationVal = sensorFusion.getElevation();
+        double[] pdrValues = getCurrentPDRCalc();
+        float elevationVal = getElevation();
 
         // local PDR LatLn point
         LatLng positionPDR = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startRef[0], startRef[1], ecefRefCoords);
@@ -1155,13 +1153,15 @@ public class SensorFusion implements SensorEventListener, Observer {
         }
 
     }
-    public void updateFusionGNSS(double latitude,double longitude,double altitude,float GNSS_accuracy){
-
-        // use the parameter values to get the LatLng
-        LatLng positionGNNS = new LatLng(latitude, longitude);
+    public void updateFusionGNSS(double latitude,double longitude, double altitude){
 
         // call fusion algorithm
         particleFilter.update(latitude, longitude);
+        double[] pdrCalc = getCurrentPDRCalc();
+
+        double[] enuCoords = CoordinateTransform.geodeticToEnu(latitude, longitude, altitude, startRef[0], startRef[1], startRef[2]);
+        Log.d("EKF:", "ENU coordinates East " +enuCoords[0]+" North "+enuCoords[1]+" Up "+enuCoords[2]);
+        extendedKalmanFilter.onObservationUpdate(enuCoords[0], enuCoords[1], pdrCalc[0], pdrCalc[1], getElevation());
     }
 
 

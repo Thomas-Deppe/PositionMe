@@ -579,6 +579,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             @Override
             public void run() {
                 compassIcon.setRotation((float) Math.toDegrees(sensorFusion.passOrientation()));
+                user_marker.setRotation((float) Math.toDegrees(sensorFusion.passOrientation()));
                 //compassIcon.setRotation((float) -Math.toDegrees(sensorFusion.passOrientation()));
             }
         });
