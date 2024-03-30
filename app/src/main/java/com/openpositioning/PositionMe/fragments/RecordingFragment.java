@@ -610,9 +610,15 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             @Override
             public void run() {
                 if (showGNSS!= null && showGNSS.isChecked()){
+                if (showGNSS!= null && showGNSS.isChecked()) {
                     updateGNSSInfo();
                     updateGNSSTrajectory(new LatLng(currentPosition.latitude, currentPosition.longitude));
                 }
+                // todo correct this part!!!
+                float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
+                updateGNSSTrajectory(new LatLng(GNSS_pos[0] , GNSS_pos[1]));
+                displayPolylineAsDots(trajectory_gnss.getPoints());
+                System.out.println("gnss was displayed" + currentPosition);
             }
         });
     }
