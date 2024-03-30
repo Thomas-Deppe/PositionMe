@@ -1,72 +1,93 @@
 package com.openpositioning.PositionMe.sensors;
 
+import com.google.android.gms.maps.model.LatLng;
+import com.openpositioning.PositionMe.CoordinateTransform;
+
 import org.apache.commons.math3.linear.*;
+import org.ejml.simple.SimpleMatrix;
 
 public class ExtendedKalmanFilter {
 
-    private static final double q_trans = 0.01; //translation velocity variance
-    private static final double q_rot = 0.01; //rotational velocity variance
-    private static final double q_dist = 0.01; //rotational velocity variance
+    // Example standard deviations for process and measurement noise
+    private double sigma_dx = 0.5; // Standard deviation for dx process noise
+    private double sigma_dy = 0.5; // Standard deviation for dy process noise
+    private double sigma_ds = 0.1; // Standard deviation for ds process noise
+    private double sigma_dtheta = Math.toRadians(5); // Standard deviation for dθ process noise in radians
 
-    // Error covariance of the current state
-    private RealMatrix P;
-    private RealVector X;
-    //State transition matrix
-    private RealMatrix F;
+    private double sigma_x_meas = 1.0; // Standard deviation for x measurement noise
+    private double sigma_y_meas = 1.0; // Standard deviation for y measurement noise
 
-    private RealMatrix H;
-    // Process error
-    private final RealMatrix Q;
-    // Measurement error
-    private final RealMatrix R;
-
+    private SimpleMatrix Fk; // State transition matrix
+    private SimpleMatrix Qk; // Process noise covariance matrix
+    private SimpleMatrix Hk; // Observation matrix
+    private SimpleMatrix Rk; // Observation noise covariance matrix
+    private SimpleMatrix Pk; // Estimate error covariance
+    private SimpleMatrix Xk; // State estimate
 
     public ExtendedKalmanFilter() {
 
         // Initial state vector
-        this.X = new ArrayRealVector(new double[]{0.0, 0.0, 0.0, 0.0});
+        Xk = new SimpleMatrix(4, 1); // Assuming zero initial state
 
         // Initial covariance matrix
-        this.P = MatrixUtils.createRealIdentityMatrix(4).scalarMultiply(0.001); // Initial uncertainty
+        this.Pk =  SimpleMatrix.diag(1, 1, 1, 1); // Initial error covariance // Initial uncertainty
 
         // Process noise covariance matrix Q
-        this.Q = MatrixUtils.createRealDiagonalMatrix(new double[]{q_trans, q_rot, q_dist});
+        this.Qk = SimpleMatrix.diag((sigma_dx*sigma_dx), (sigma_dy*sigma_dy), (sigma_ds*sigma_ds), (sigma_dtheta*sigma_dtheta));
 
         // Measurement noise covariance matrix R
-        this.R = MatrixUtils.createRealDiagonalMatrix(new double[]{1.0, 1.0});
+        this.Rk = SimpleMatrix.diag((sigma_x_meas*sigma_x_meas), (sigma_y_meas*sigma_y_meas));
 
         // Hk based on the observation model (static in this case)
-        this.H = MatrixUtils.createRealMatrix(new double[][]{
+        this.Hk = new SimpleMatrix(new double[][]{
                 {1, 0, 0, 0},
                 {0, 1, 0, 0}
         });
     }
 
-    public void predict(double theta, double ds) {
-        // Update Fk based on the current state
-        double cosTheta = Math.cos(theta);
-        double sinTheta = Math.sin(theta);
-        F = MatrixUtils.createRealMatrix(new double[][]{
-                {1, 0, cosTheta - ds * sinTheta, 0},
-                {0, 1, sinTheta + ds * cosTheta, 0},
-                {0, 0, 1, 0},
-                {0, 0, 0, 1}
+    private void updateFk(double theta_k, double step_k){
+        double cosTheta = Math.cos(theta_k);
+        double sinTheta = Math.sin(theta_k);
+
+        this.Fk = new SimpleMatrix(new double[][]{
+                {1, 0 , cosTheta, -step_k * sinTheta},
+                {0,1, sinTheta, step_k * cosTheta, 0},
+                {0,0,1,0},
+                {0,0,0,1}
         });
+    }
+
+    public void predict(double theta_k, double step_k) {
+        // Update Fk based on the current state
+        updateFk(theta_k, step_k);
 
         // Predict the state vector Xk
-        X = F.operate(X);
+        this.Xk = Fk.mult(Xk);
 
         // Predict the covariance matrix Pk
-        P = F.multiply(P).multiply(F.transpose()).add(Q);
+        this.Pk = Fk.mult(Pk).mult(Fk.transpose()).plus(Qk);
+        System.out.println("XK after predict: "+Xk.toString());
     }
 
-    public void update(double[] latLong_data, double relX, double relY, double bearing){
+    public void update(double[] observation_k){
+        SimpleMatrix Zk = new SimpleMatrix(new double[][]{{observation_k[0]}, {observation_k[1]}});
 
+        SimpleMatrix y_pred = Zk.minus(Hk.mult(Xk));
+        SimpleMatrix Sk = Hk.mult(Pk).mult(Hk.transpose()).plus(Rk);
+        SimpleMatrix KalmanGain = Pk.mult(Hk.transpose().mult(Sk.invert()));
+
+        Xk = Xk.plus(KalmanGain.mult(y_pred));
+        Pk = Pk.minus(KalmanGain.mult(Hk).mult(Pk));
     }
 
-    private double wrapToPi (double angle){
-        while (angle > Math.PI) angle -= 2 * Math.PI;
-        while (angle <= -Math.PI) angle += 2 * Math.PI;
-        return angle;
+    public LatLng onObservationUpdate(double observe_x, double observe_y, double PDR_x, double PDR_y, double altitude){
+        double[] observation = new double[] {(observe_x - PDR_x), (observe_y - PDR_y)};
+
+        update(observation);
+
+        System.out.println("XK after update: "+Xk.toString());
+        double[] startPosition = SensorFusion.getInstance().getGNSSLatLngAlt(true);
+        double[] ecefRefCoords = SensorFusion.getInstance().getEcefRefCoords();
+        return CoordinateTransform.enuToGeodetic(Xk.get(0, 0), Xk.get(1,0), altitude, startPosition[0], startPosition[1], ecefRefCoords);
     }
 }

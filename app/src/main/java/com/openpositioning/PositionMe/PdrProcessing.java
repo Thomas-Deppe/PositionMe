@@ -274,6 +274,8 @@ public class PdrProcessing {
 
     }
 
+    public float getStepLength(){ return stepLength; }
+
     /**
      * Get the current elevation as calculated by the PDR class.
      *

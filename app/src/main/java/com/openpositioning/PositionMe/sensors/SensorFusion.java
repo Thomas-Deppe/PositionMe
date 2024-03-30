@@ -136,6 +136,7 @@ public class SensorFusion implements SensorEventListener, Observer {
     private float GNSS_accuracy;
     private float[] startLocation;
     private double[] startRef;
+    private double[] ecefRefCoords;
     // Wifi values
     private List<Wifi> wifiList;
 
@@ -150,6 +151,7 @@ public class SensorFusion implements SensorEventListener, Observer {
     private PathView pathView;
 
     private ParticleFilter particleFilter;
+    private ExtendedKalmanFilter extendedKalmanFilter;
 
     //Creates a list of classes which wish to receive asynchronous updates from this class.
     private List<SensorFusionUpdates> recordingUpdates;
@@ -190,6 +192,8 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.startRef = new double[3];
 
         this.recordingUpdates = new ArrayList<>();
+
+        this.extendedKalmanFilter = new ExtendedKalmanFilter();
     }
 
 
@@ -350,8 +354,9 @@ public class SensorFusion implements SensorEventListener, Observer {
                 //Store time of step
                 long stepTime = android.os.SystemClock.uptimeMillis() - bootTime;
                 float[] newCords = this.pdrProcessing.updatePdr(stepTime, this.accelMagnitude, this.orientation[0]);
-
+                float step_length = this.pdrProcessing.getStepLength();
                 //update fusion processing algorithm with new PDR
+                this.extendedKalmanFilter.predict(this.orientation[0], step_length);
                 this.updateFusionPDR();
 
                 // PDR to display
@@ -590,6 +595,10 @@ public class SensorFusion implements SensorEventListener, Observer {
         return latLongAlt;
     }
 
+    public double[] getEcefRefCoords(){
+        return ecefRefCoords;
+    }
+
     /**
      * A get method to retrieve the accuracy of the GNSS position
      * @return the accuracy of the received GNSS position
@@ -602,7 +611,7 @@ public class SensorFusion implements SensorEventListener, Observer {
      * @param startPosition contains the initial location set by the user
      */
     public void setStartGNSSLatitude(float[] startPosition){
-        startLocation = startPosition;
+        this.startLocation = startPosition;
     }
 
     /**
@@ -611,7 +620,8 @@ public class SensorFusion implements SensorEventListener, Observer {
      * @param startPosition contains the initial location set by the user
      */
     public void setStartGNSSLatLngAlt(double[] startPosition){
-        startRef = startPosition;
+        this.startRef = startPosition;
+        this.ecefRefCoords = CoordinateTransform.geodeticToEcef(startPosition[0],startPosition[1], startPosition[2]);
     }
 
     /**
@@ -1034,8 +1044,8 @@ public class SensorFusion implements SensorEventListener, Observer {
     private static final double zScoreFactor = 0.6745;
 
     //Variables to store the users starting position.
-    private double[] startPosition = new double[3];
-    private double[] ecefRefCoords = new double[3];
+    //private double[] startPosition = new double[3];
+    //private double[] ecefRefCoords = new double[3];
 
     private LatLng positionWifi; // stores the most recent LatLng point returned from server
     private LatLng positionFusion; // stores the most recent LatLng point calculated by the Fusion Algorithm
@@ -1116,11 +1126,8 @@ public class SensorFusion implements SensorEventListener, Observer {
         double[] pdrValues = sensorFusion.getCurrentPDRCalc();
         float elevationVal = sensorFusion.getElevation();
 
-        //Transform the ENU coordinates to WSG84 coordinates google maps uses
-        sensorFusion.getGNSSLatitude(true);
-
         // local PDR LatLn point
-        LatLng positionPDR = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startPosition[0], startPosition[1], ecefRefCoords);
+        LatLng positionPDR = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startRef[0], startRef[1], ecefRefCoords);
         double latitude = positionPDR.latitude;
         double longitude = positionPDR.longitude;
 
