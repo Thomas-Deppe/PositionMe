@@ -8,7 +8,8 @@ public interface SensorFusionUpdates {
         PDR_UPDATE,
         GNSS_UPDATE,
         ORIENTATION_UPDATE,
-        FUSION_UPDATE,
+        PARTICLE_UPDATE,
+        KALMAN_UPDATE,
         WIFI_UPDATE
     }
 
@@ -18,7 +19,9 @@ public interface SensorFusionUpdates {
 
     void onGNSSUpdate();
 
-    void onFusionUpdate(LatLng fusion);
+    void onParticleUpdate(LatLng particle);
+
+    void onKalmanUpdate(LatLng kalmna);
 
     void onWifiUpdate(LatLng wifi);
 }

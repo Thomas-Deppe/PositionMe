@@ -102,6 +102,7 @@ public class ParticleFilter {
         double[] enucoords = CoordinateTransform.geodeticToEnu(measuredLat,measuredLong,refAlt,refLatitude,refLongitude,refAlt);
         updateMeasurementModel(enucoords[0], enucoords[1]);
         resampleParticles();
+
         return predict();
     }
 
