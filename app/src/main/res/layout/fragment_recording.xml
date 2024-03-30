@@ -17,14 +17,15 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
+
         <Button
             android:id="@+id/stopButton"
-            android:layout_width="150dp"
-            android:layout_height="70dp"
-            android:layout_marginEnd="32dp"
-            android:layout_marginBottom="24dp"
+            android:layout_width="107dp"
+            android:layout_height="46dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"
             android:text="@string/stop"
-            android:textSize="24sp"
+            android:textSize="16sp"
             app:icon="@drawable/ic_baseline_stop_24"
             app:iconGravity="start"
             app:iconSize="30dp"
@@ -33,17 +34,97 @@
 
         <Button
             android:id="@+id/cancelButton"
-            android:layout_width="150dp"
-            android:layout_height="70dp"
-            android:layout_marginStart="32dp"
-            android:layout_marginBottom="24dp"
+            android:layout_width="103dp"
+            android:layout_height="47dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginBottom="16dp"
             android:text="@string/cancel"
             android:textSize="16sp"
             app:icon="@drawable/ic_baseline_cancel_24"
             app:iconGravity="start"
-            app:iconSize="28dp"
+            app:iconSize="18dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
+
+        <Button
+            android:id="@+id/zoom_out_button"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:alpha="0.50"
+            android:background="@drawable/round_button"
+            app:icon="@drawable/ic_remove_24px"
+            app:iconSize="20dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.022"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0.845" />
+
+        <Button
+            android:id="@+id/recentre_button"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:alpha="0.50"
+            android:background="@drawable/round_button"
+            android:gradientRadius="30dp"
+            app:icon="@drawable/center_focus_strong_24"
+            app:iconSize="20dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.958"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0.754" />
+
+        <Button
+            android:id="@+id/zoom_in_button"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:alpha="0.50"
+            android:background="@drawable/round_button"
+            android:gradientRadius="30dp"
+            app:icon="@drawable/ic_add_24px"
+            app:iconSize="20dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.022"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0.754" />
+
+        <Button
+            android:id="@+id/position_tag_button"
+            android:layout_width="114dp"
+            android:layout_height="49dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="25dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"
+            android:text="@string/pos_tag"
+            android:textSize="14sp"
+            app:iconSize="25dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/stopButton"
+            app:layout_constraintHorizontal_bias="0.444"
+            app:layout_constraintStart_toEndOf="@+id/cancelButton"
+            app:layout_constraintTop_toTopOf="@+id/timeRemainingBar"
+            app:layout_constraintVertical_bias="1.0" />
+
+        <Button
+            android:id="@+id/mapTypeButton"
+            android:layout_width="50dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="16dp"
+            android:text=""
+            app:icon="@drawable/layers_24"
+            app:iconSize="20dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="1.0"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0.846" />
 
         <ProgressBar
             android:id="@+id/timeRemainingBar"

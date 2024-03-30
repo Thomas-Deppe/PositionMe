@@ -30,7 +30,12 @@ public enum Buildings {
             new LatLngBounds(
                     new LatLng(55.92219166666666, -3.173122222222222),
                     new LatLng(55.92262777777778, -3.171638888888889)), -122.5447f,
-            initializeFlemingJenkinsFloorplan(), R.array.floors_fleming);
+            initializeFlemingJenkinsFloorplan(), R.array.floors_fleming),
+    CORRIDOR_NUCLEUS("Unspecified Area",
+            new LatLngBounds(
+                    new LatLng(55.92283144440415, -3.1747893497322983),
+                    new LatLng(55.92290963514205, -3.174606739285856)), -122.5447f,
+            null, 0);
 
     //Buildings data
     private String name;

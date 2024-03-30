@@ -1,4 +1,7 @@
 package com.openpositioning.PositionMe;
+import com.google.android.gms.maps.model.LatLng;
+import com.openpositioning.PositionMe.sensors.SensorFusion;
+
 import java.util.Random;
 
 public class ParticleFilter {
@@ -84,15 +87,16 @@ public class ParticleFilter {
         particles = newParticles;
     }
 
-    public double[] update(double measuredLatitude, double measuredLongitude) {
+    public void update(double measuredLatitude, double measuredLongitude) {
         updateMotionModel();
         updateMeasurementModel(measuredLatitude, measuredLongitude);
         resampleParticles();
 
-        return predict();
+        // updates the observer - notifies the RecordingFragment
+        SensorFusion.getInstance().notifyFusionUpdate(predict());
     }
 
-    public double[] predict() {
+    public LatLng predict() {
         // Not sure if this is needed, depends on how the calls are made
         double estimatedLatitude = 0;
         double estimatedLongitude = 0;
@@ -102,7 +106,7 @@ public class ParticleFilter {
             estimatedLongitude += particle.getLongitude() * particle.getWeight();
         }
 
-        return new double[]{estimatedLatitude, estimatedLongitude};
+        return new LatLng(estimatedLatitude, estimatedLongitude);
     }
 }
 

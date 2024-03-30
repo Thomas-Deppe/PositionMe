@@ -18,6 +18,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.gson.JsonObject;
 import com.openpositioning.PositionMe.CoordinateTransform;
 import com.openpositioning.PositionMe.MainActivity;
+import com.openpositioning.PositionMe.ParticleFilter;
 import com.openpositioning.PositionMe.PathView;
 import com.openpositioning.PositionMe.PdrProcessing;
 import com.openpositioning.PositionMe.SensorFusionUpdates;
@@ -147,6 +148,8 @@ public class SensorFusion implements SensorEventListener, Observer {
 
     // Trajectory displaying class
     private PathView pathView;
+
+    private ParticleFilter particleFilter;
 
     //Creates a list of classes which wish to receive asynchronous updates from this class.
     private List<SensorFusionUpdates> recordingUpdates;
@@ -430,6 +433,7 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void updateServer(Object[] responseList) {
         //update fusion processing with new wifi fingerprint
         JSONObject wifiresponse = (JSONObject) responseList[0];
+        System.out.println("server reponse: "+ wifiresponse);
         updateFusionWifi(wifiresponse);
     }
 
@@ -1096,7 +1100,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         JSONObject fingerprint = new JSONObject();
         for (Wifi data : wifiList){
             String bssid = Long.toString(data.getBssid());
-            System.out.println(bssid);
+//            System.out.println(bssid);
             fingerprint.put(bssid, data.getLevel());
         }
 
@@ -1121,23 +1125,25 @@ public class SensorFusion implements SensorEventListener, Observer {
         double longitude = positionPDR.longitude;
 
         // call fusion algorithm arg(double, double)
-//        posReturnFusion = particlefilter.update(latitude, longitude);
+        particleFilter.update(latitude, longitude);
     }
 
     public void updateFusionWifi(JSONObject wifiresponse){
 
         try {
+            System.out.println("===== in update particle fusion ====");
+
             double latitude = wifiresponse.getDouble("lat");
-            double longitude = wifiresponse.getDouble("long");
+            double longitude = wifiresponse.getDouble("lon");
             double floor = wifiresponse.getDouble("floor");
             positionWifi = new LatLng(latitude, longitude);
-
+            System.out.println(latitude + ", "+  longitude);
             // display the position on UI
             notifySensorUpdate(SensorFusionUpdates.update_type.WIFI_UPDATE);
 
             // todo: error checking - in case the latlng are 0,0
             // call fusion algorithm
-            // particlefilter.update(latitude, longitude);
+            particleFilter.update(latitude, longitude);
 
         } catch (JSONException e) {
             e.printStackTrace();
@@ -1150,7 +1156,12 @@ public class SensorFusion implements SensorEventListener, Observer {
         LatLng positionGNNS = new LatLng(latitude, longitude);
 
         // call fusion algorithm
-//        posReturnFusion = particlefilter.update(latitude, longitude);
+        particleFilter.update(latitude, longitude);
+    }
+
+
+    public void initialiseParticleFilter(double initialLat, double initialLong){
+        particleFilter = new ParticleFilter(initialLat, initialLong);
     }
 
 

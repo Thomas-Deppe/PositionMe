@@ -80,8 +80,9 @@ public class ServerCommunications implements Observable {
     private static final String infoRequestURL =
             "https://openpositioning.org/api/live/users/trajectories/" + userKey
                     + "?key=" + masterKey;
-    private static final String uploadWifiURL = "https://openpositioning.org/api/position/fine" + userKey
-                    + "?skip=0&limit=30&key=" + masterKey;
+    private static final String uploadWifiURL = "https://openpositioning.org/api/position/fine";
+            //+ userKey
+            //        + "/?key=" + masterKey; //?skip=0&limit=30&
     private static final String PROTOCOL_CONTENT_TYPE = "multipart/form-data";
     private static final String PROTOCOL_CONTENT_TYPE_FINGERPRINT = "application/json";
     private static final String PROTOCOL_ACCEPT_TYPE = "application/json";
@@ -178,8 +179,7 @@ public class ServerCommunications implements Observable {
                         if (!response.isSuccessful()) {
                             System.err.println("POST error response: " + responseBody.string());
                             success = false;
-                            notifyObservers(2);
-                            throw new IOException("Unexpected code " + response);
+                            return;
                         }
 
                         // Print the response headers
@@ -187,11 +187,14 @@ public class ServerCommunications implements Observable {
                         for (int i = 0, size = responseHeaders.size(); i < size; i++) {
                             System.out.println(responseHeaders.name(i) + ": " + responseHeaders.value(i));
                         }
+
+                        String response_string = responseBody.string();
+
                         // Print a confirmation of a successful POST to API
-                        System.out.println("Successful post response: " + responseBody.string());
+                        System.out.println("Successful post response: " + response_string);
 
                         // assign the response to a global variable
-                        wifiresponse = new JSONObject(responseBody.string());
+                        wifiresponse = new JSONObject(response_string);
                         notifyObservers(2);
 
                     } catch (JSONException e) {

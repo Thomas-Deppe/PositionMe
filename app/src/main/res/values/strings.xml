@@ -16,6 +16,7 @@
     <string name="show_storage">Show locally</string>
     <string name="setLocation">Set</string>
     <string name="cancel">Cancel</string>
+    <string name="pos_tag">Tag</string>
 
     <!-- Sensors -->
     <string name="accelerometer">Accelerometer</string>
@@ -75,6 +76,11 @@
     <string name="show_GNSS">Show GNSS Position: </string>
     <string name="accuracy_GNSS">GNSS Accuracy : </string>
     <string name="pos_error">Position Error Relative to PDR: </string>
+    <string name="display_pdr">Display PDR: </string>
+    <string name="display_wifi">Display Wifi: </string>
+    <string name="display_gnss">Display GNSS: </string>
+    <string name="display_kalman">Kalman Filter: </string>
+    <string name="display_particle">Particle Filter:</string>
 
 
     <!-- Units only -->
