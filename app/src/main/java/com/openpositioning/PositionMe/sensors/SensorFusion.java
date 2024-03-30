@@ -1158,8 +1158,8 @@ public class SensorFusion implements SensorEventListener, Observer {
     }
 
 
-    public void initialiseParticleFilter(double initialLat, double initialLong){
-        particleFilter = new ParticleFilter(initialLat, initialLong);
+    public void initialiseParticleFilter(double initialLat, double initialLong, double initialAlt){
+        particleFilter = new ParticleFilter(initialLat, initialLong, initialAlt);
     }
 
 
