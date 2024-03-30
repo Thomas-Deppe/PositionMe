@@ -1,5 +1,7 @@
 package com.openpositioning.PositionMe;
 
+import android.util.Log;
+import android.location.Location;
 import com.google.android.gms.maps.model.LatLng;
 import com.openpositioning.PositionMe.sensors.SensorFusion;
 
@@ -7,29 +9,34 @@ import java.util.Random;
 
 public class ParticleFilter {
     // Constants, may need to be tuned
-    private static final int NUM_PARTICLES = 500;
+    private static final int NUM_PARTICLES = 100;
     private static final double PARTICLE_STD_DEV = 0.0005; // Standard deviation for generating particles
 
     // Parameters
     private Particle[] particles;
     private final Random random;
+
+    // Reference Lat Long objects
     private final double refLatitude;
     private final double refLongitude;
+
+    // Reference Altitude object
     private final double refAlt;
+
+    // Reference ENU objects
     private final double initialTrueEasting;
     private final double initialTrueNorthing;
-    private final double initialTrueAlt;
 
 
     public ParticleFilter(double startLat, double startLong, double startAlt) {
         this.refLatitude = startLat;
         this.refLongitude = startLong;
         this.refAlt = startAlt;
-
+        Log.d("PARTICLE_FILTER", "Starting LatLong x: " + refLatitude + " y:" + refLongitude);
         double[] enucoords = CoordinateTransform.geodeticToEnu(refLatitude, refLongitude, refAlt, refLatitude, refLongitude, refAlt);
         this.initialTrueEasting = enucoords[0];
         this.initialTrueNorthing = enucoords[1];
-        this.initialTrueAlt = enucoords[2];
+        Log.d("PARTICLE_FILTER", "Starting ENU Easting: " + initialTrueEasting + " ENU Northing:" + initialTrueNorthing);
 
         particles = new Particle[NUM_PARTICLES];
         random = new Random();
@@ -101,13 +108,21 @@ public class ParticleFilter {
     }
 
     public void update(double measuredLat, double measuredLong) {
+        float[] distanceBetween = new float[1];
+        Location.distanceBetween(measuredLat, measuredLong, refLatitude, refLongitude, distanceBetween);
+        if (distanceBetween[0] < 1) {
+            Log.d("PARTICLE_FILTER", "New LatLang distance too small: " + distanceBetween[0]);
+            return;
+        }
+
         updateMotionModel();
         double[] enucoords = CoordinateTransform.geodeticToEnu(measuredLat,measuredLong,refAlt,refLatitude,refLongitude,refAlt);
         updateMeasurementModel(enucoords[0], enucoords[1]);
         resampleParticles();
-
-        SensorFusion.getInstance().notifyParticleUpdate(predict());
-//        return predict();
+        LatLng enu_prediction = predict();
+        LatLng prediction = new LatLng(refLatitude + enu_prediction.latitude, refLongitude + enu_prediction.longitude);
+        SensorFusion.getInstance().notifyParticleUpdate(prediction);
+        Log.d("PARTICLE_FILTER", "Prediction LatLong: " + prediction.latitude + " " + prediction.longitude);
     }
 
     public LatLng predict() {
@@ -120,7 +135,7 @@ public class ParticleFilter {
             estimatedNorthing += particle.getNorthing() * particle.getWeight();
         }
 
-        return CoordinateTransform.enuToGeodetic(estimatedEasting,estimatedNorthing,refAlt,initialTrueEasting,initialTrueNorthing, initialTrueAlt);
+        return CoordinateTransform.enuToGeodetic(estimatedEasting,estimatedNorthing,refAlt,initialTrueEasting,initialTrueNorthing, refAlt);
     }
 }
 
