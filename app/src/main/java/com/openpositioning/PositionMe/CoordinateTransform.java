@@ -45,6 +45,20 @@ public final class CoordinateTransform {
         return ecefCoords;
     }
 
+
+    public static double[] ecefToENU(double east, double north, double up, double refLatitude, double refLongitude){
+        double[] enuCoords = new double[3];
+        double latRad = Math.toRadians(refLatitude);
+        double lngRad = Math.toRadians(refLongitude);
+
+        double t = Math.cos(lngRad) * east + Math.sin(lngRad) * north;
+        enuCoords[0] = -Math.sin(lngRad) * east + Math.cos(lngRad) * north;
+        enuCoords[2] = Math.cos(latRad)*t + Math.sin(latRad) * up;
+        enuCoords[1] = -Math.sin(latRad) *t + Math.cos(latRad) * up;
+
+        return enuCoords;
+    }
+
     /**
      * Converts ENU coordinates to ECEF coordinates from a reference point which is the users start location.
      * The reference ECEF coordinates are calulcated from the WSG84 coordiantes.
@@ -144,6 +158,13 @@ public final class CoordinateTransform {
         Log.d("ECEFCOORDS", "x: "+ecefCoords[0]+" y: "+ecefCoords[1]+" z: "+ecefCoords[2]);
 
         return ecefToGeodetic(ecefCoords);
+    }
+
+    public static double[] geodeticToEnu(double latitude, double longitude, double altitude, double refLatitude, double refLongitude, double refAltitude){
+        double[] newPosition = geodeticToEcef(latitude, longitude, altitude);
+        double[] ecefRefCoords = geodeticToEcef(refLatitude, refLongitude, refAltitude);
+
+        return ecefToENU((newPosition[0]-ecefRefCoords[0]), (newPosition[1]-ecefRefCoords[1]), (newPosition[2]-newPosition[2]), refLatitude, refLongitude);
     }
 
     /**
