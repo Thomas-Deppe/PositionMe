@@ -281,11 +281,11 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         //creates the settings dialog
         createRecordingSettingsDialog();
 
-        System.out.println("visibility pdr " + user_trajectory.isVisible());
-        System.out.println("visibility wifi " + user_trajectory.isVisible());
-        System.out.println("visibility gps " + user_trajectory.isVisible());
-        System.out.println("visibility  " + user_trajectory.isVisible());
-        System.out.println("visibility  " + user_trajectory.isVisible());
+//        System.out.println("visibility pdr " + user_trajectory.isVisible());
+//        System.out.println("visibility wifi " + user_trajectory.isVisible());
+//        System.out.println("visibility gps " + user_trajectory.isVisible());
+//        System.out.println("visibility kalman " + user_trajectory.isVisible());
+//        System.out.println("visibility particle " + user_trajectory.isVisible());
 
         this.recordingSettings = getView().findViewById(R.id.settingButton);
         this.recordingSettings.setOnClickListener(new View.OnClickListener() {
