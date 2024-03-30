@@ -238,6 +238,9 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             trajectory_kalman.setZIndex(1);
             trajectory_particle.setZIndex(1);
 
+            // initialise filters
+            sensorFusion.initialiseParticleFilter(startPosition[0], startPosition[1], sensorFusion.getElevation());
+
 
             buildingManager = new BuildingManager(recording_map);
             currentPosition = position;
