@@ -93,7 +93,7 @@ public class ParticleFilter {
         resampleParticles();
 
         // updates the observer - notifies the RecordingFragment
-        SensorFusion.getInstance().notifyFusionUpdate(predict());
+        SensorFusion.getInstance().notifyParticleUpdate(predict());
     }
 
     public LatLng predict() {
