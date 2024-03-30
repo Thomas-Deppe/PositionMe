@@ -1,6 +1,8 @@
 package com.openpositioning.PositionMe;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.openpositioning.PositionMe.sensors.SensorFusion;
+
 import java.util.Random;
 
 public class ParticleFilter {
@@ -17,6 +19,7 @@ public class ParticleFilter {
     private final double initialTrueEasting;
     private final double initialTrueNorthing;
     private final double initialTrueAlt;
+
 
     public ParticleFilter(double startLat, double startLong, double startAlt) {
         this.refLatitude = startLat;
@@ -97,13 +100,14 @@ public class ParticleFilter {
         particles = newParticles;
     }
 
-    public LatLng update(double measuredLat, double measuredLong) {
+    public void update(double measuredLat, double measuredLong) {
         updateMotionModel();
         double[] enucoords = CoordinateTransform.geodeticToEnu(measuredLat,measuredLong,refAlt,refLatitude,refLongitude,refAlt);
         updateMeasurementModel(enucoords[0], enucoords[1]);
         resampleParticles();
 
-        return predict();
+        SensorFusion.getInstance().notifyParticleUpdate(predict());
+//        return predict();
     }
 
     public LatLng predict() {
