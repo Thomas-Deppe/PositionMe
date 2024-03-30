@@ -5,7 +5,7 @@ import java.util.Random;
 
 public class ParticleFilter {
     // Constants, may need to be tuned
-    private static final int NUM_PARTICLES = 100;
+    private static final int NUM_PARTICLES = 500;
     private static final double PARTICLE_STD_DEV = 0.0005; // Standard deviation for generating particles
 
     // Parameters
@@ -18,10 +18,10 @@ public class ParticleFilter {
     private final double initialTrueNorthing;
     private final double initialTrueAlt;
 
-    public ParticleFilter(double startLat, double startLong) {
+    public ParticleFilter(double startLat, double startLong, double startAlt) {
         this.refLatitude = startLat;
         this.refLongitude = startLong;
-        this.refAlt = 0;
+        this.refAlt = startAlt;
 
         double[] enucoords = CoordinateTransform.geodeticToEnu(refLatitude, refLongitude, refAlt, refLatitude, refLongitude, refAlt);
         this.initialTrueEasting = enucoords[0];
