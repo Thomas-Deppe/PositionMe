@@ -164,7 +164,7 @@ public final class CoordinateTransform {
         double[] newPosition = geodeticToEcef(latitude, longitude, altitude);
         double[] ecefRefCoords = geodeticToEcef(refLatitude, refLongitude, refAltitude);
 
-        return ecefToENU((newPosition[0]-ecefRefCoords[0]), (newPosition[1]-ecefRefCoords[1]), (newPosition[2]-newPosition[2]), refLatitude, refLongitude);
+        return ecefToENU((newPosition[0]-ecefRefCoords[0]), (newPosition[1]-ecefRefCoords[1]), (newPosition[2]-ecefRefCoords[2]), refLatitude, refLongitude);
     }
 
     /**
