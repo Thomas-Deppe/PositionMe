@@ -3,8 +3,13 @@ package com.openpositioning.PositionMe.fragments;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.CountDownTimer;
@@ -25,13 +30,16 @@ import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavDirections;
 import androidx.navigation.Navigation;
@@ -41,6 +49,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.GroundOverlay;
 import com.google.android.gms.maps.model.GroundOverlayOptions;
@@ -79,14 +88,18 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     //Stores the polyline of the users path so that it can be updated without the need to redraw the entire polyline
     private Polyline user_trajectory; // this shows the pdr trajectory
     private Polyline trajectory_wifi;
-    private Polyline trajectory_fusion;
+    private Polyline trajectory_particle;
     private Polyline trajectory_gnss;
+    private Polyline trajectory_kalman;
     //Zoom of google maps
     private float zoom = 19f;
     //Button to end PDR recording
     private Button stopButton;
     private Button cancelButton;
+    private Button zoomInButton, zoomOutButton, mapChangeButton, recentreButton, posTagButton;
+
     private ToggleButton showGNSS;
+    private Switch displayPRDToggle, displayWifiToggle, displayGNSSToggle, displayKalmanToggle, displayParticleToggle;
     private Button recordingSettings;
     private Dialog recordingSettingsDialog;
     //Recording icon to show user recording is in progress
@@ -107,7 +120,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     private TextView accuracy;
     private TextView positioning_error;
     //Settings spinners that allow the user to change
-    private Spinner mapTypeSpinner;
+//    private Spinner mapTypeSpinner;
     private Spinner floorSpinner;
 
     //App settings
@@ -179,7 +192,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         public void onMapReady(GoogleMap googleMap) {
             recording_map = googleMap;
             recording_map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
-            mapTypeSpinner.setSelection(0);
+//            mapTypeSpinner.setSelection(0);
             recording_map.getUiSettings().setCompassEnabled(true);
             recording_map.getUiSettings().setTiltGesturesEnabled(true);
             recording_map.getUiSettings().setRotateGesturesEnabled(true);
@@ -202,13 +215,29 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             user_trajectory = recording_map.addPolyline(new PolylineOptions().add(position));
             trajectory_gnss = recording_map.addPolyline(new PolylineOptions().add(position));
             trajectory_wifi = recording_map.addPolyline(new PolylineOptions().add(position));
-            trajectory_fusion = recording_map.addPolyline(new PolylineOptions().add(position));
+            trajectory_particle = recording_map.addPolyline(new PolylineOptions().add(position));
+            trajectory_kalman = recording_map.addPolyline(new PolylineOptions().add(position));
 
             // setting different colur of the polylines
             user_trajectory.setColor(Color.BLUE);
             trajectory_wifi.setColor(Color.GREEN);
             trajectory_gnss.setColor(Color.RED);
-            trajectory_fusion.setColor(Color.YELLOW);
+            trajectory_particle.setColor(Color.YELLOW);
+            trajectory_kalman.setColor(Color.CYAN);
+            int x= 5;
+            user_trajectory.setWidth(x);
+            trajectory_gnss.setWidth(x);
+            trajectory_wifi.setWidth(x);
+            trajectory_kalman.setWidth(x);
+            trajectory_particle.setWidth(x);
+
+            // display on the complete top
+            user_trajectory.setZIndex(1);
+            trajectory_gnss.setZIndex(1);
+            trajectory_wifi.setZIndex(1);
+            trajectory_kalman.setZIndex(1);
+            trajectory_particle.setZIndex(1);
+
 
             buildingManager = new BuildingManager(recording_map);
             currentPosition = position;
@@ -275,7 +304,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         //creates the settings dialog
         createRecordingSettingsDialog();
 
-
         this.recordingSettings = getView().findViewById(R.id.settingButton);
         this.recordingSettings.setOnClickListener(new View.OnClickListener() {
             /**
@@ -320,6 +348,74 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 NavDirections action = RecordingFragmentDirections.actionRecordingFragmentToHomeFragment();
                 Navigation.findNavController(view).navigate(action);
                 if(autoStop != null) autoStop.cancel();
+            }
+        });
+
+        // Button for Choosing the Map Type
+        this.mapChangeButton = getView().findViewById(R.id.mapTypeButton);
+        this.mapChangeButton.setOnClickListener(new View.OnClickListener() {
+            /**
+             * {@inheritDoc}
+             * OnClick listener for button to go to home fragment.
+             * When button clicked the PDR recording is stopped and the {@link HomeFragment} is loaded.
+             * The trajectory is not saved.
+             */
+            @Override
+            public void onClick(View view) {
+                // Alert Dialog to choose from the Map Type Options
+                MapTypeAlertDialog();
+            }
+        });
+
+        // Button for Zoom In
+        this.zoomInButton = getView().findViewById(R.id.zoom_in_button);
+        this.zoomInButton.setOnClickListener(new View.OnClickListener() {
+            // Button for Choosing the floor in the building
+            @Override
+            public void onClick(View view) {
+                setZoomInButton();
+            }
+        });
+
+        // Button for Zoom Out
+        this.zoomOutButton = getView().findViewById(R.id.zoom_out_button);
+        this.zoomOutButton.setOnClickListener(new View.OnClickListener() {
+            // Button for Choosing the floor in the building
+            @Override
+            public void onClick(View view) {
+                setZoomOutButton();
+            }
+        });
+
+        // Button for recentring to the current position
+        this.recentreButton = getView().findViewById(R.id.recentre_button);
+        this.recentreButton.setOnClickListener(new View.OnClickListener() {
+            /**
+             * {@inheritDoc}
+             * OnClick listener for button to go to home fragment.
+             * When button clicked the PDR recording is stopped and the {@link HomeFragment} is loaded.
+             * The trajectory is not saved.
+             */
+            @Override
+            public void onClick(View view) {
+                // call the method that centers the view to the current geo location
+                recenterMap();
+            }
+        });
+
+
+        // Button for choosing thhe current position as the reference point for the filters
+        this.posTagButton = getView().findViewById(R.id.recentre_button);
+        this.posTagButton.setOnClickListener(new View.OnClickListener() {
+            /**
+             * {@inheritDoc}
+             * OnClick listener for button to go to home fragment.
+             * When button clicked the PDR recording is stopped and the {@link HomeFragment} is loaded.
+             * The trajectory is not saved.
+             */
+            @Override
+            public void onClick(View view) {
+                tagPositionToFilters();
             }
         });
 
@@ -398,7 +494,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 currentBuilding.setText(buildingManager.getCurrentBuilding().getBuildingName());
                 buildingManager.removeGroundOverlay();
                 // no coverage
-                Toast.makeText(getActivity(), "This area has no wifi coverage", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(getActivity(), "This area has no wifi coverage", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -416,10 +512,11 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     currentBuilding.setText(buildingManager.getCurrentBuilding().getBuildingName());
                     if (buildingManager.getCurrentBuilding().equals(Buildings.UNSPECIFIED)) {
                         buildingManager.removeGroundOverlay();
-                        Toast.makeText(getActivity(), "This area has no wifi coverage", Toast.LENGTH_SHORT).show();
+                        System.out.println("toast - no wifi coverage" + buildingManager.getCurrentBuilding());
+//                        Toast.makeText(getActivity(), "This area has no wifi coverage", Toast.LENGTH_SHORT).show();
                     }
                     else if (buildingManager.getCurrentBuilding().equals(Buildings.CORRIDOR_NUCLEUS)){
-                        Toast.makeText(getActivity(), "This area has no wifi coverage", Toast.LENGTH_SHORT).show();
+//                        Toast.makeText(getActivity(), "This area has no wifi coverage", Toast.LENGTH_SHORT).show();
                     }
                     else {
                         buildingManager.addGroundOverlay();
@@ -456,6 +553,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     LatLng user_step = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startPosition[0], startPosition[1], ecefRefCoords);
                     currentPosition = user_step;
                     updateUserTrajectory(user_step);
+                    displayPolylineAsDots(user_trajectory.getPoints(), Color.BLUE);
                     user_marker.setPosition(user_step);
                 }
 
@@ -493,12 +591,32 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
      * It retrieves all values from {@link SensorFusion}
      */
     @Override
-    public void onFusionUpdate(LatLng fusionAlgPosition){
+    public void onParticleUpdate(LatLng particleAlgPosition){
         // todo: display new point on the map -- fusion trajectory
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                updateFusionTrajectory(fusionAlgPosition);
+                updateParticleTrajectory(particleAlgPosition);
+                displayPolylineAsDots(trajectory_particle.getPoints(), Color.YELLOW);
+            }
+        });
+    }
+
+
+    /**
+     * An overridden {@link SensorFusionUpdates} that is called as soon as the device receives a new GNSS update. If the showGNSS button is toggled to on,
+     * then GNSS data is displayed on the screen.
+     *
+     * It retrieves all values from {@link SensorFusion}
+     */
+    @Override
+    public void onKalmanUpdate(LatLng kalmanAlgPosition){
+        // todo: display new point on the map -- fusion trajectory
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                updateKalmanTrajectory(kalmanAlgPosition);
+                displayPolylineAsDots(trajectory_kalman.getPoints(), Color.CYAN);
             }
         });
     }
@@ -515,10 +633,14 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (showGNSS!= null && showGNSS.isChecked()){
+                if (showGNSS!= null && showGNSS.isChecked()) {
                     updateGNSSInfo();
-                    updateGNSSTrajectory(new LatLng(currentPosition.latitude, currentPosition.longitude));
                 }
+                // todo correct this part!!!
+                float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
+                updateGNSSTrajectory(new LatLng(GNSS_pos[0] , GNSS_pos[1]));
+                displayPolylineAsDots(trajectory_gnss.getPoints(), Color.RED);
+                System.out.println("gnss was displayed" + currentPosition);
             }
         });
     }
@@ -571,6 +693,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             @Override
             public void run() {
                 updateWifiTrajectory(latlngFromWifiServer);
+                displayPolylineAsDots(trajectory_wifi.getPoints(), Color.GREEN);
             }
         });
     }
@@ -605,11 +728,45 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         }
     }
 
-    private void updateFusionTrajectory (LatLng point){
-        if (trajectory_fusion != null) {
-            List<LatLng> points = trajectory_fusion.getPoints();
+    private void updateParticleTrajectory (LatLng point){
+        if (trajectory_particle != null) {
+            List<LatLng> points = trajectory_particle.getPoints();
             points.add(point);
-            trajectory_fusion.setPoints(points);
+            trajectory_particle.setPoints(points);
+        }
+    }
+
+    private void updateKalmanTrajectory (LatLng point){
+        if (trajectory_kalman != null) {
+            List<LatLng> points = trajectory_kalman.getPoints();
+            points.add(point);
+            trajectory_kalman.setPoints(points);
+        }
+    }
+
+    private void displayPolylineAsDots(List<LatLng> points, int dotColor) {
+        Marker dotOnMap;
+        int numberPoints = points.size();
+//        for (int i = numberPoints-8; i < numberPoints; i++) {
+//
+//        }
+        for (LatLng point : points) {
+            Drawable vectorDrawable = ContextCompat.getDrawable(this.getContext(), R.drawable.radio_button_checked_24px);
+            vectorDrawable.setColorFilter(dotColor, PorterDuff.Mode.SRC_IN);
+            Bitmap bitmap = Bitmap.createBitmap(vectorDrawable.getIntrinsicWidth(),
+                    vectorDrawable.getIntrinsicHeight(),
+                    Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+            vectorDrawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+            vectorDrawable.draw(canvas);
+            BitmapDescriptor bitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap);
+
+
+            dotOnMap = recording_map.addMarker(new MarkerOptions()
+                    .position(point)
+                    .icon(bitmapDescriptor)
+                    .anchor(0.5f, 0.5f) // to make it in centre
+            );
         }
     }
 
@@ -775,29 +932,29 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
      * A helper method to set up the map type spinner that allows the user to choose between different map types. It sets an OnItemSelectedListener to monitor if the user
      * selects a new map type and updates the displayed map accordingly.
      */
-    private void mapTypeSpinnerInitialisation() {
-        // Set up Spinner functionality as needed
-        ArrayAdapter<CharSequence> mapTypeAdapter = ArrayAdapter.createFromResource(requireContext(),
-                R.array.map_type_options, android.R.layout.simple_spinner_item);
-        mapTypeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        this.mapTypeSpinner.setAdapter(mapTypeAdapter);
-
-        // Set a listener to handle Spinner item selection
-        this.mapTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                // Handle item selection
-                String selectedMapType = parent.getItemAtPosition(position).toString();
-                // Perform actions based on selected map type
-                updateMapType(selectedMapType);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-                // Do nothing
-            }
-        });
-    }
+//    private void mapTypeSpinnerInitialisation() {
+//        // Set up Spinner functionality as needed
+//        ArrayAdapter<CharSequence> mapTypeAdapter = ArrayAdapter.createFromResource(requireContext(),
+//                R.array.map_type_options, android.R.layout.simple_spinner_item);
+//        mapTypeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+//        this.mapTypeSpinner.setAdapter(mapTypeAdapter);
+//
+//        // Set a listener to handle Spinner item selection
+//        this.mapTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+//            @Override
+//            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+//                // Handle item selection
+//                String selectedMapType = parent.getItemAtPosition(position).toString();
+//                // Perform actions based on selected map type
+//                updateMapType(selectedMapType);
+//            }
+//
+//            @Override
+//            public void onNothingSelected(AdapterView<?> parent) {
+//                // Do nothing
+//            }
+//        });
+//    }
 
     /**
      * A helper method used to change the text value of the spinner into the map types google supports.
@@ -839,12 +996,104 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         recordingSettingsDialog.getWindow().getAttributes().windowAnimations = R.style.BottomSheetAnimation;
         recordingSettingsDialog.getWindow().setGravity(Gravity.BOTTOM);
 
-        this.mapTypeSpinner = recordingSettingsDialog.findViewById(R.id.mapTypeSpinner);
+//        this.mapTypeSpinner = recordingSettingsDialog.findViewById(R.id.mapTypeSpinner);
         //this.mapTypeSpinner = getView().findViewById(R.id.mapTypeSpinner);
-        mapTypeSpinnerInitialisation();
+//        mapTypeSpinnerInitialisation();
 
+        // switches for displaying the trajectories
+        displayPRDToggle = recordingSettingsDialog.findViewById(R.id.displayPDR);
+        displayPRDToggle.setChecked(true);
+        displayPRDToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                if (isChecked){
+                    if (user_trajectory != null){
+                        user_trajectory.setVisible(true);
+                    }
+                }
+                else{
+                    if (user_trajectory != null){
+                        user_trajectory.setVisible(false);
+                    }
+                }
+            }
+        });
+
+        displayWifiToggle = recordingSettingsDialog.findViewById(R.id.displayWifi);
+        displayWifiToggle.setChecked(true);
+        displayWifiToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                if (isChecked){
+                    if (trajectory_wifi != null){
+                        trajectory_wifi.setVisible(true);
+                    }
+                }
+                else{
+                    if (trajectory_wifi != null){
+                        trajectory_wifi.setVisible(false);
+                    }
+                }
+            }
+        });
+
+        displayGNSSToggle = recordingSettingsDialog.findViewById(R.id.displayGNSS);
+        displayGNSSToggle.setChecked(true);
+        displayGNSSToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                if (isChecked){
+                    if (trajectory_gnss != null){
+                        trajectory_gnss.setVisible(true);
+                    }
+                }
+                else{
+                    if (trajectory_gnss != null){
+                        trajectory_gnss.setVisible(false);
+                    }
+                }
+            }
+        });
+
+        displayKalmanToggle = recordingSettingsDialog.findViewById(R.id.displayKalman);
+        displayKalmanToggle.setChecked(true);
+        displayKalmanToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                if (isChecked){
+                    if (trajectory_kalman != null){
+                        trajectory_kalman.setVisible(true);
+                    }
+                }
+                else{
+                    if (trajectory_kalman != null){
+                        trajectory_kalman.setVisible(false);
+                    }
+                }
+            }
+        });
+
+        displayParticleToggle = recordingSettingsDialog.findViewById(R.id.displayParticle);
+        displayParticleToggle.setChecked(true);
+        displayParticleToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
+                if (isChecked){
+                    if (trajectory_particle != null){
+                        trajectory_particle.setVisible(true);
+                    }
+                }
+                else{
+                    if (trajectory_particle != null){
+                        trajectory_particle.setVisible(false);
+                    }
+                }
+            }
+        });
+
+        
         this.floorSpinner = recordingSettingsDialog.findViewById(R.id.floorSpinner);
-        //this.floorSpinner = getView().findViewById(R.id.floorSpinner);
+//        this.floorSpinner = getView().findViewById(R.id.floorSpinner);
         this.floorSpinner.setVisibility(View.GONE);
 
         this.floor_title = recordingSettingsDialog.findViewById(R.id.floor_title);
@@ -902,6 +1151,67 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
      * **/
     public void setZoomOutButton(){
         zoom--;
-//        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(positionCurr, zoom ));
+        if (!(recording_map == null)) {
+            recording_map.animateCamera(CameraUpdateFactory.newLatLngZoom(currentPosition, zoom));
+        }
     }
+
+
+    /**
+     * Updates the Animate Camera to the current location on the map
+     * @var positionCurr, zoom
+     * **/
+    public void recenterMap(){
+        recording_map.animateCamera(CameraUpdateFactory.newLatLngZoom(currentPosition, zoom ));
+        return;
+    }
+
+    /**
+     * Defines an Alert Dialog Object for change of the Map Type
+     * Redirects to changeMapType() method to update the Map Object
+     * @var currentMapType - int
+     */
+    public void MapTypeAlertDialog(){
+
+        if (recording_map == null){return;}
+
+        // AlertDialog builder instance
+        AlertDialog.Builder alertDialog = new AlertDialog.Builder(getActivity());
+        alertDialog.setTitle("Choose a Map Type:");
+
+        // list of items to be displayed
+        final String[] listItems = new String[]{"Terrain", "Hybrid", "Satellite", "Normal"};
+        final int[] checkedItem = {-1};
+
+        alertDialog.setSingleChoiceItems(listItems, checkedItem[0], (dialog, which) -> {
+            // set the chosen map type to the global variable
+            checkedItem[0] = which;
+            System.out.println("new map" + listItems[checkedItem[0]]);
+
+            // call method to update the Map Object
+            updateMapType(listItems[checkedItem[0]]);
+
+            // close the dialog alert
+            dialog.dismiss();
+        });
+
+        // negative button
+        alertDialog.setNegativeButton("Cancel", (dialog, which) -> {
+        });
+
+        AlertDialog customAlertDialog = alertDialog.create();
+        customAlertDialog.show();
+    }
+
+    /**
+     * Defines an Alert Dialog Object for change of the Map Type
+     * Redirects to changeMapType() method to update the Map Object
+     * @var currentMapType - int
+     */
+    public void tagPositionToFilters(){
+        // TODO: calls one of the update functions in Sensor Fusion
+//        sensorFusion.updateTag(currentPosition);
+    }
+
 }
+

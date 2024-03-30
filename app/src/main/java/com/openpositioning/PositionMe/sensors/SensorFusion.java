@@ -405,26 +405,12 @@ public class SensorFusion implements SensorEventListener, Observer {
                             .setSpeed(speed)
                             .setProvider(provider)
                             .setRelativeTimestamp(System.currentTimeMillis()-absoluteStartTime));
+                    System.out.println("gnss has recorded a new point");
                     updateFusionGNSS(latitude, longitude, altitude, GNSS_accuracy);
                     notifySensorUpdate(SensorFusionUpdates.update_type.GNSS_UPDATE);
                 }
             }
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * Receives updates from {@link ServerCommunications}.
-     *
-     * @see ServerCommunications for more information abour notify Observables.
-     */
-    public void onFusionAlgComplete(){
-
-        // store the new position as a global LatLng
-        positionFusion = new LatLng(posReturnFusion[0], posReturnFusion[1]);
-        // update the displayed trajectory
-        notifySensorUpdate(SensorFusionUpdates.update_type.FUSION_UPDATE);
     }
 
     /**
@@ -734,8 +720,11 @@ public class SensorFusion implements SensorEventListener, Observer {
                 case GNSS_UPDATE:
                     observer.onGNSSUpdate();
                     break;
-                case FUSION_UPDATE:
-                    observer.onFusionUpdate(positionFusion);
+                case KALMAN_UPDATE:
+                    observer.onKalmanUpdate(positionWifi);
+                    break;
+                case PARTICLE_UPDATE:
+                    observer.onParticleUpdate(positionParticle);
                     break;
                 case WIFI_UPDATE:
                     observer.onWifiUpdate(positionWifi);
@@ -745,13 +734,21 @@ public class SensorFusion implements SensorEventListener, Observer {
 
     /**
      * A helper method used to notify all observers that an update is available.
-     *
-     * change to void
-     * sensorfusion.getinstance.notifyFusionUpdate(calculated LatLNG)
      */
-    public void notifyFusionUpdate(LatLng fusion_pos){
+    public void notifyParticleUpdate(LatLng particle_pos){
+        positionParticle = particle_pos;
         for (SensorFusionUpdates observer : recordingUpdates) {
-            observer.onFusionUpdate(fusion_pos);
+            observer.onParticleUpdate(particle_pos);
+        }
+    }
+
+    /**
+     * A helper method used to notify all observers that an update is available.
+     */
+    public void notifyKalmanFilterUpdate(LatLng kalman_pos){
+        positionKalman = kalman_pos;
+        for (SensorFusionUpdates observer : recordingUpdates) {
+            observer.onKalmanUpdate(kalman_pos);
         }
     }
 
@@ -1048,7 +1045,8 @@ public class SensorFusion implements SensorEventListener, Observer {
     //private double[] ecefRefCoords = new double[3];
 
     private LatLng positionWifi; // stores the most recent LatLng point returned from server
-    private LatLng positionFusion; // stores the most recent LatLng point calculated by the Fusion Algorithm
+    private LatLng positionParticle; // stores the most recent LatLng point calculated by the Fusion Algorithm
+    private LatLng positionKalman;
     private double[] posReturnFusion;
 
 
@@ -1167,8 +1165,8 @@ public class SensorFusion implements SensorEventListener, Observer {
     }
 
 
-    public void initialiseParticleFilter(double initialLat, double initialLong){
-        particleFilter = new ParticleFilter(initialLat, initialLong);
+    public void initialiseParticleFilter(double initialLat, double initialLong, double initialAlt){
+        particleFilter = new ParticleFilter(initialLat, initialLong, initialAlt);
     }
 
 
