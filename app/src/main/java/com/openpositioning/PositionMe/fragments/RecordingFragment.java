@@ -3,8 +3,13 @@ package com.openpositioning.PositionMe.fragments;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.CountDownTimer;
@@ -34,6 +39,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavDirections;
 import androidx.navigation.Navigation;
@@ -43,6 +49,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.GroundOverlay;
 import com.google.android.gms.maps.model.GroundOverlayOptions;
@@ -217,6 +224,12 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             trajectory_gnss.setColor(Color.RED);
             trajectory_particle.setColor(Color.YELLOW);
             trajectory_kalman.setColor(Color.CYAN);
+            int x= 5;
+            user_trajectory.setWidth(x);
+            trajectory_gnss.setWidth(x);
+            trajectory_wifi.setWidth(x);
+            trajectory_kalman.setWidth(x);
+            trajectory_particle.setWidth(x);
 
             buildingManager = new BuildingManager(recording_map);
             currentPosition = position;
@@ -532,6 +545,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     LatLng user_step = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startPosition[0], startPosition[1], ecefRefCoords);
                     currentPosition = user_step;
                     updateUserTrajectory(user_step);
+                    displayPolylineAsDots(user_trajectory.getPoints(), Color.BLUE);
                     user_marker.setPosition(user_step);
                 }
 
@@ -575,6 +589,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             @Override
             public void run() {
                 updateParticleTrajectory(particleAlgPosition);
+                displayPolylineAsDots(trajectory_particle.getPoints(), Color.YELLOW);
             }
         });
     }
@@ -593,6 +608,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             @Override
             public void run() {
                 updateKalmanTrajectory(kalmanAlgPosition);
+                displayPolylineAsDots(trajectory_kalman.getPoints(), Color.CYAN);
             }
         });
     }
@@ -609,15 +625,13 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (showGNSS!= null && showGNSS.isChecked()){
                 if (showGNSS!= null && showGNSS.isChecked()) {
                     updateGNSSInfo();
-                    updateGNSSTrajectory(new LatLng(currentPosition.latitude, currentPosition.longitude));
                 }
                 // todo correct this part!!!
                 float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
                 updateGNSSTrajectory(new LatLng(GNSS_pos[0] , GNSS_pos[1]));
-                displayPolylineAsDots(trajectory_gnss.getPoints());
+                displayPolylineAsDots(trajectory_gnss.getPoints(), Color.RED);
                 System.out.println("gnss was displayed" + currentPosition);
             }
         });
@@ -671,6 +685,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             @Override
             public void run() {
                 updateWifiTrajectory(latlngFromWifiServer);
+                displayPolylineAsDots(trajectory_wifi.getPoints(), Color.GREEN);
             }
         });
     }
@@ -718,6 +733,32 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             List<LatLng> points = trajectory_kalman.getPoints();
             points.add(point);
             trajectory_kalman.setPoints(points);
+        }
+    }
+
+    private void displayPolylineAsDots(List<LatLng> points, int dotColor) {
+        Marker dotOnMap;
+        int numberPoints = points.size();
+//        for (int i = numberPoints-8; i < numberPoints; i++) {
+//
+//        }
+        for (LatLng point : points) {
+            Drawable vectorDrawable = ContextCompat.getDrawable(this.getContext(), R.drawable.radio_button_checked_24px);
+            vectorDrawable.setColorFilter(dotColor, PorterDuff.Mode.SRC_IN);
+            Bitmap bitmap = Bitmap.createBitmap(vectorDrawable.getIntrinsicWidth(),
+                    vectorDrawable.getIntrinsicHeight(),
+                    Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+            vectorDrawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+            vectorDrawable.draw(canvas);
+            BitmapDescriptor bitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap);
+
+
+            dotOnMap = recording_map.addMarker(new MarkerOptions()
+                    .position(point)
+                    .icon(bitmapDescriptor)
+                    .anchor(0.5f, 0.5f) // to make it in centre
+            );
         }
     }
 
@@ -954,6 +995,9 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         // switches for displaying the trajectories
         displayPRDToggle = recordingSettingsDialog.findViewById(R.id.displayPDR);
         displayPRDToggle.setChecked(true);
+        displayPRDToggle.getBackground().setColorFilter(Color.BLUE, PorterDuff.Mode.MULTIPLY);
+        displayPRDToggle.setHighlightColor(Color.BLUE);
+        displayPRDToggle.setOutlineAmbientShadowColor(Color.BLUE);
         displayPRDToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 
@@ -972,6 +1016,8 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
         displayWifiToggle = recordingSettingsDialog.findViewById(R.id.displayWifi);
         displayWifiToggle.setChecked(true);
+        displayWifiToggle.getBackground().setColorFilter(Color.GREEN, PorterDuff.Mode.MULTIPLY);
+        displayWifiToggle.setOutlineSpotShadowColor(Color.GREEN);
         displayWifiToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 
@@ -990,6 +1036,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
         displayGNSSToggle = recordingSettingsDialog.findViewById(R.id.displayGNSS);
         displayGNSSToggle.setChecked(true);
+        displayGNSSToggle.getBackground().setColorFilter(Color.RED, PorterDuff.Mode.MULTIPLY);
         displayGNSSToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 
@@ -1008,6 +1055,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
         displayKalmanToggle = recordingSettingsDialog.findViewById(R.id.displayKalman);
         displayKalmanToggle.setChecked(true);
+        displayKalmanToggle.getBackground().setColorFilter(Color.CYAN, PorterDuff.Mode.MULTIPLY);
         displayKalmanToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 
@@ -1026,6 +1074,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
         displayParticleToggle = recordingSettingsDialog.findViewById(R.id.displayParticle);
         displayParticleToggle.setChecked(true);
+        displayParticleToggle.getBackground().setColorFilter(Color.YELLOW, PorterDuff.Mode.MULTIPLY);
         displayParticleToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 
@@ -1163,5 +1212,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         // TODO: calls one of the update functions in Sensor Fusion
 //        sensorFusion.updateTag(currentPosition);
     }
+
 }
 

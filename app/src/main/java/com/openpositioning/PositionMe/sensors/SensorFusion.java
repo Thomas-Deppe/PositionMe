@@ -400,6 +400,7 @@ public class SensorFusion implements SensorEventListener, Observer {
                             .setSpeed(speed)
                             .setProvider(provider)
                             .setRelativeTimestamp(System.currentTimeMillis()-absoluteStartTime));
+                    System.out.println("gnss has recorded a new point");
                     updateFusionGNSS(latitude, longitude, altitude, GNSS_accuracy);
                     notifySensorUpdate(SensorFusionUpdates.update_type.GNSS_UPDATE);
                 }
