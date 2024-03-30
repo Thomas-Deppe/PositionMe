@@ -231,6 +231,14 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             trajectory_kalman.setWidth(x);
             trajectory_particle.setWidth(x);
 
+            // display on the complete top
+            user_trajectory.setZIndex(1);
+            trajectory_gnss.setZIndex(1);
+            trajectory_wifi.setZIndex(1);
+            trajectory_kalman.setZIndex(1);
+            trajectory_particle.setZIndex(1);
+
+
             buildingManager = new BuildingManager(recording_map);
             currentPosition = position;
             checkBuildingBounds(currentPosition);
@@ -995,9 +1003,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         // switches for displaying the trajectories
         displayPRDToggle = recordingSettingsDialog.findViewById(R.id.displayPDR);
         displayPRDToggle.setChecked(true);
-        displayPRDToggle.getBackground().setColorFilter(Color.BLUE, PorterDuff.Mode.MULTIPLY);
-        displayPRDToggle.setHighlightColor(Color.BLUE);
-        displayPRDToggle.setOutlineAmbientShadowColor(Color.BLUE);
         displayPRDToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 
@@ -1016,8 +1021,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
         displayWifiToggle = recordingSettingsDialog.findViewById(R.id.displayWifi);
         displayWifiToggle.setChecked(true);
-        displayWifiToggle.getBackground().setColorFilter(Color.GREEN, PorterDuff.Mode.MULTIPLY);
-        displayWifiToggle.setOutlineSpotShadowColor(Color.GREEN);
         displayWifiToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 
@@ -1036,7 +1039,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
         displayGNSSToggle = recordingSettingsDialog.findViewById(R.id.displayGNSS);
         displayGNSSToggle.setChecked(true);
-        displayGNSSToggle.getBackground().setColorFilter(Color.RED, PorterDuff.Mode.MULTIPLY);
         displayGNSSToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 
@@ -1055,7 +1057,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
         displayKalmanToggle = recordingSettingsDialog.findViewById(R.id.displayKalman);
         displayKalmanToggle.setChecked(true);
-        displayKalmanToggle.getBackground().setColorFilter(Color.CYAN, PorterDuff.Mode.MULTIPLY);
         displayKalmanToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 
@@ -1074,7 +1075,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
         displayParticleToggle = recordingSettingsDialog.findViewById(R.id.displayParticle);
         displayParticleToggle.setChecked(true);
-        displayParticleToggle.getBackground().setColorFilter(Color.YELLOW, PorterDuff.Mode.MULTIPLY);
         displayParticleToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 
