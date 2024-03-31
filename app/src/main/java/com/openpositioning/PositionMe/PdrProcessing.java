@@ -145,13 +145,14 @@ public class PdrProcessing {
 
         // Change angle so zero rad is east
         float adaptedHeading = (float) (Math.PI/2 - headingRad);
+        Log.d("EKF", "PDR adapted Heading "+adaptedHeading);
 
         // Calculate step length
         if(!useManualStep) {
             //ArrayList<Double> accelMagnitudeFiltered = filter(accelMagnitudeOvertime);
             // Estimate stride
             this.stepLength = weibergMinMax(accelMagnitudeOvertime);
-            Log.d("STRIDE_LENGTH", "StrideLength "+stepLength);
+            Log.d("EKF", "StrideLength "+stepLength);
             // System.err.println("Step Length" + stepLength);
         }
 
@@ -273,6 +274,8 @@ public class PdrProcessing {
         return pdrPosition;
 
     }
+
+    public float getStepLength(){ return stepLength; }
 
     /**
      * Get the current elevation as calculated by the PDR class.

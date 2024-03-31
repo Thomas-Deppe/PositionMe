@@ -249,7 +249,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             trajectory_particle.setZIndex(1);
 
             // initialise filters
-            sensorFusion.initialiseParticleFilter(startPosition[0], startPosition[1], sensorFusion.getElevation());
+            sensorFusion.initialiseFusionAlgorithm(startPosition[0], startPosition[1], sensorFusion.getElevation());
             System.out.println("starting logation"+startPosition);
 
 
@@ -610,32 +610,34 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                updateParticleTrajectory(particleAlgPosition);
-                displayPolylineAsDots(trajectory_particle.getPoints(), Color.YELLOW, particleMarker);
+                if (particleAlgPosition != null && trajectory_particle != null) {
+                    updateParticleTrajectory(particleAlgPosition);
+                    displayPolylineAsDots(trajectory_particle.getPoints(), Color.YELLOW, particleMarker);
 
-                // now update the positional errors of pdr, wifi, gnss
-                // setting the positional errors --> 1st groundtruth Kalman, 2nd ground truth Particle
-                float[] distanceBetween = new float[1];
+                    // now update the positional errors of pdr, wifi, gnss
+                    // setting the positional errors --> 1st groundtruth Kalman, 2nd ground truth Particle
+                    float[] distanceBetween = new float[1];
 
-                // get current GNSS reading and compare it
-                float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
-                Location.distanceBetween(GNSS_pos[0], GNSS_pos[1], particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
-                poserrorGNSS[1] = distanceBetween[0];
+                    // get current GNSS reading and compare it
+                    float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
+                    Location.distanceBetween(GNSS_pos[0], GNSS_pos[1], particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
+                    poserrorGNSS[1] = distanceBetween[0];
 
-                // get current PDR and compare it
-                Location.distanceBetween(currentPosition.latitude, currentPosition.longitude, particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
-                poserrorPDR[1] = distanceBetween[0];
+                    // get current PDR and compare it
+                    Location.distanceBetween(currentPosition.latitude, currentPosition.longitude, particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
+                    poserrorPDR[1] = distanceBetween[0];
 
-                // get current wifi server position and compare it
-                if (wifiPosition == null){
-                    poserrorWifi[1] = 0;
+                    // get current wifi server position and compare it
+                    if (wifiPosition == null){
+                        poserrorWifi[1] = 0;
+                    }
+                    else {
+                        Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
+                        poserrorWifi[1] = distanceBetween[0];
+                    }
+                    // update the UI
+                    updatePositionError();
                 }
-                else {
-                    Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
-                    poserrorWifi[1] = distanceBetween[0];
-                }
-                // update the UI
-                updatePositionError();
             }
         });
     }

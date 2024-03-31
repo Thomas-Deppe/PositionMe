@@ -138,6 +138,7 @@ public class SensorFusion implements SensorEventListener, Observer {
     private double[] startRef;
 
     private boolean runKalmanFilter, runParticleFilter;
+    private double[] ecefRefCoords;
 
     // Wifi values
     private List<Wifi> wifiList;
@@ -153,6 +154,7 @@ public class SensorFusion implements SensorEventListener, Observer {
     private PathView pathView;
 
     private ParticleFilter particleFilter;
+    private ExtendedKalmanFilter extendedKalmanFilter;
 
     //Creates a list of classes which wish to receive asynchronous updates from this class.
     private List<SensorFusionUpdates> recordingUpdates;
@@ -353,8 +355,9 @@ public class SensorFusion implements SensorEventListener, Observer {
                 //Store time of step
                 long stepTime = android.os.SystemClock.uptimeMillis() - bootTime;
                 float[] newCords = this.pdrProcessing.updatePdr(stepTime, this.accelMagnitude, this.orientation[0]);
-
+                float step_length = this.pdrProcessing.getStepLength();
                 //update fusion processing algorithm with new PDR
+                this.extendedKalmanFilter.predict(this.orientation[0], step_length, passAverageStepLength());
                 this.updateFusionPDR();
 
                 // PDR to display
@@ -404,7 +407,7 @@ public class SensorFusion implements SensorEventListener, Observer {
                             .setProvider(provider)
                             .setRelativeTimestamp(System.currentTimeMillis()-absoluteStartTime));
                     System.out.println("gnss has recorded a new point");
-                    updateFusionGNSS(latitude, longitude, altitude, GNSS_accuracy);
+                    updateFusionGNSS(latitude, longitude ,altitude);
                     notifySensorUpdate(SensorFusionUpdates.update_type.GNSS_UPDATE);
                 }
             }
@@ -425,8 +428,6 @@ public class SensorFusion implements SensorEventListener, Observer {
         System.out.println("server reponse: "+ wifiresponse);
         updateFusionWifi(wifiresponse);
     }
-
-
 
     /**
      * {@inheritDoc}
@@ -579,6 +580,10 @@ public class SensorFusion implements SensorEventListener, Observer {
         return latLongAlt;
     }
 
+    public double[] getEcefRefCoords(){
+        return ecefRefCoords;
+    }
+
     /**
      * A get method to retrieve the accuracy of the GNSS position
      * @return the accuracy of the received GNSS position
@@ -591,7 +596,7 @@ public class SensorFusion implements SensorEventListener, Observer {
      * @param startPosition contains the initial location set by the user
      */
     public void setStartGNSSLatitude(float[] startPosition){
-        startLocation = startPosition;
+        this.startLocation = startPosition;
     }
 
     /**
@@ -600,7 +605,8 @@ public class SensorFusion implements SensorEventListener, Observer {
      * @param startPosition contains the initial location set by the user
      */
     public void setStartGNSSLatLngAlt(double[] startPosition){
-        startRef = startPosition;
+        this.startRef = startPosition;
+        this.ecefRefCoords = CoordinateTransform.geodeticToEcef(startPosition[0],startPosition[1], startPosition[2]);
     }
 
     /**
@@ -714,7 +720,7 @@ public class SensorFusion implements SensorEventListener, Observer {
                     observer.onGNSSUpdate();
                     break;
                 case KALMAN_UPDATE:
-                    observer.onKalmanUpdate(positionWifi);
+                    observer.onKalmanUpdate(positionKalman);
                     break;
                 case PARTICLE_UPDATE:
                     observer.onParticleUpdate(positionParticle);
@@ -1034,8 +1040,8 @@ public class SensorFusion implements SensorEventListener, Observer {
     private static final double zScoreFactor = 0.6745;
 
     //Variables to store the users starting position.
-    private double[] startPosition = new double[3];
-    private double[] ecefRefCoords = new double[3];
+    //private double[] startPosition = new double[3];
+    //private double[] ecefRefCoords = new double[3];
 
     private LatLng positionWifi; // stores the most recent LatLng point returned from server
     private LatLng positionParticle; // stores the most recent LatLng point calculated by the Fusion Algorithm
@@ -1114,26 +1120,25 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void updateFusionPDR(){
 
         // calculate new PDR, save as global variable
-        double[] pdrValues = sensorFusion.getCurrentPDRCalc();
-        float elevationVal = sensorFusion.getElevation();
-
-        //Transform the ENU coordinates to WSG84 coordinates google maps uses
-        sensorFusion.getGNSSLatitude(true);
+        double[] pdrValues = getCurrentPDRCalc();
+        float elevationVal = getElevation();
 
         // local PDR LatLn point
-        LatLng positionPDR = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startPosition[0], startPosition[1], ecefRefCoords);
+        LatLng positionPDR = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startRef[0], startRef[1], ecefRefCoords);
         double latitude = positionPDR.latitude;
         double longitude = positionPDR.longitude;
 
         // call fusion algorithm arg(double, double)
         particleFilter.update(latitude, longitude);
+        this.extendedKalmanFilter.onStepDetected(pdrValues[0], pdrValues[1], elevationVal,
+                passOrientation(), this.pdrProcessing.getStepLength(),
+                (android.os.SystemClock.uptimeMillis() - bootTime));
     }
 
     public void updateFusionWifi(JSONObject wifiresponse){
 
         try {
             System.out.println("===== in update particle fusion ====");
-
             double latitude = wifiresponse.getDouble("lat");
             double longitude = wifiresponse.getDouble("lon");
             double floor = wifiresponse.getDouble("floor");
@@ -1145,24 +1150,31 @@ public class SensorFusion implements SensorEventListener, Observer {
             // todo: error checking - in case the latlng are 0,0
             // call fusion algorithm
             particleFilter.update(latitude, longitude);
+            this.extendedKalmanFilter.onOpportunisticUpdate(
+                    CoordinateTransform.geodeticToEnu(latitude, longitude, getElevation(), startRef[0], startRef[1], startRef[2]),
+                    (android.os.SystemClock.uptimeMillis() - bootTime)
+            );
 
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
     }
-    public void updateFusionGNSS(double latitude,double longitude,double altitude,float GNSS_accuracy){
-
-        // use the parameter values to get the LatLng
-        LatLng positionGNNS = new LatLng(latitude, longitude);
+    public void updateFusionGNSS(double latitude,double longitude, double altitude){
 
         // call fusion algorithm
         particleFilter.update(latitude, longitude);
+        //double[] pdrCalc = getCurrentPDRCalc();
+
+        //double[] enuCoords = CoordinateTransform.geodeticToEnu(latitude, longitude, altitude, startRef[0], startRef[1], startRef[2]);
+        //Log.d("EKF:", "ENU coordinates East " +enuCoords[0]+" North "+enuCoords[1]+" Up "+enuCoords[2]);
+        //extendedKalmanFilter.onObservationUpdate(enuCoords[0], enuCoords[1], pdrCalc[0], pdrCalc[1], getElevation());
     }
 
 
-    public void initialiseParticleFilter(double initialLat, double initialLong, double initialAlt){
-        particleFilter = new ParticleFilter(initialLat, initialLong, initialAlt);
+    public void initialiseFusionAlgorithm(double initialLat, double initialLong, double initialAlt){
+        this.particleFilter = new ParticleFilter(initialLat, initialLong, initialAlt);
+        this.extendedKalmanFilter = new ExtendedKalmanFilter();
     }
 
 

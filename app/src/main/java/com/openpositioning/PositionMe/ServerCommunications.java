@@ -208,7 +208,7 @@ public class ServerCommunications implements Observable {
             // and notify observers and user
             System.err.println("No internet connection, No request allowed right now!");
             success = false;
-            notifyObservers(2);
+            //notifyObservers(2);
         }
 
     }
