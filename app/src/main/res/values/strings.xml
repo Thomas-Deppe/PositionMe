@@ -16,7 +16,7 @@
     <string name="show_storage">Show locally</string>
     <string name="setLocation">Set</string>
     <string name="cancel">Cancel</string>
-    <string name="pos_tag">Tag</string>
+    <string name="pos_tag">Position \n Tag</string>
 
     <!-- Sensors -->
     <string name="accelerometer">Accelerometer</string>
@@ -29,6 +29,8 @@
     <string name="gnssLatLong">GNSS (Lat/Long)</string>
     <string name="gnss">GNSS</string>
     <string name="pdr_pos">PDR Position</string>
+    <string name="pdr_short">PDR</string>
+    <string name="wifi_short">WiFi</string>
     <string name="pdr">Pedestrian Dead Reckoning</string>
     <string name="wifi">WiFi Networks</string>
 
@@ -81,11 +83,16 @@
     <string name="display_gnss">Display GNSS:  \t</string>
     <string name="display_kalman">Kalman Filter: \t</string>
     <string name="display_particle">Particle Filter:\t \t</string>
+    <string name="error_pdr">PDR error:\t \t</string>
+    <string name="error_wifi">Wifi error:\t \t</string>
+    <string name="error_gnss">GNSS error:</string>
+    <string name="error_title">\t Kalman Filter \t \t Particle Filter</string>
 
 
     <!-- Units only -->
     <string name="meter">%1$s m</string>
     <string name="db">%1$s dB</string>
+    <string name="errors">%1$s</string>
 
     <!-- Sync Preferences -->
     <string name="time_title">Sync frequency</string>

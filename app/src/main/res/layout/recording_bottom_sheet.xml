@@ -191,33 +191,56 @@
             android:text="ToggleButton" />
     </LinearLayout>
 
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
         <TextView
-            android:id="@+id/accuracy_title"
+            android:id="@+id/error_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/accuracy_GNSS"
+            android:text="@string/error_title"
+            android:textAlignment="viewStart"
+            android:textColor="@color/pastelBlue"
+            android:padding="8dp"
+            android:textStyle="bold"
+            android:layout_marginStart="95dp"
+            android:layout_marginTop="5dp"
+            android:textSize="16sp"
+            android:visibility="gone"/>
+
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/error_pdr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/error_pdr"
             android:textAlignment="viewStart"
             android:textColor="@color/pastelBlue"
             android:padding="8dp"
             android:textStyle="bold"
             android:layout_marginStart="12dp"
             android:layout_marginTop="5dp"
-            android:textSize="20sp"
+            android:textSize="16sp"
             android:visibility="gone"/>
 
         <TextView
-            android:id="@+id/accuracy"
+            android:id="@+id/errorParticlepdr"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/meter"
-            android:layout_marginStart="12dp"
+            android:text="@string/errors"
+            android:layout_marginStart="30dp"
             android:layout_marginTop="5dp"
-            android:textSize="20sp"
+            android:textSize="16sp"
             android:visibility="gone"/>
     </LinearLayout>
 
@@ -227,12 +250,13 @@
         android:orientation="horizontal">
 
         <TextView
-            android:id="@+id/pos_error_title"
+            android:id="@+id/error_wifi"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:layout_marginTop="5dp"
-            android:text="@string/pos_error"
+            android:padding="8dp"
+            android:text="@string/error_wifi"
             android:textAlignment="viewStart"
             android:textColor="@color/pastelBlue"
             android:textSize="16sp"
@@ -240,16 +264,46 @@
             android:visibility="gone" />
 
         <TextView
-            android:id="@+id/pos_error"
+            android:id="@+id/errorParticlewifi"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
+            android:layout_marginStart="30dp"
             android:layout_marginTop="5dp"
-            android:text="@string/meter"
-            android:textSize="20sp"
+            android:text="@string/errors"
+            android:textSize="16sp"
             android:visibility="gone" />
+
     </LinearLayout>
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/error_gnss"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/error_gnss"
+            android:textAlignment="viewStart"
+            android:textColor="@color/pastelBlue"
+            android:padding="8dp"
+            android:textStyle="bold"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="5dp"
+            android:textSize="16sp"
+            android:visibility="gone"/>
+
+        <TextView
+            android:id="@+id/errParticlegnss"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/errors"
+            android:layout_marginStart="30dp"
+            android:layout_marginTop="5dp"
+            android:textSize="16sp"
+            android:visibility="gone"/>
+    </LinearLayout>
 
 
 </LinearLayout>

@@ -20,14 +20,14 @@
 
         <Button
             android:id="@+id/stopButton"
-            android:layout_width="107dp"
-            android:layout_height="46dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginBottom="16dp"
-            android:text="@string/stop"
-            android:textSize="16sp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/round_button"
+            android:paddingLeft="12pt"
             app:icon="@drawable/ic_baseline_stop_24"
-            app:iconGravity="start"
+            app:iconGravity="textStart"
             app:iconSize="30dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent" />
@@ -36,12 +36,13 @@
             android:id="@+id/cancelButton"
             android:layout_width="50dp"
             android:layout_height="50dp"
-            android:layout_marginStart="16dp"
-            android:layout_marginBottom="16dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginBottom="12dp"
             android:background="@drawable/round_button"
+            android:paddingLeft="12pt"
             app:icon="@drawable/ic_baseline_cancel_24"
-            app:iconGravity="start"
-            app:iconSize="60dp"
+            app:iconGravity="textStart"
+            app:iconSize="30dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
@@ -71,7 +72,7 @@
             app:iconSize="20dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.958"
+            app:layout_constraintHorizontal_bias="0.955"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintVertical_bias="0.754" />
@@ -94,8 +95,8 @@
 
         <Button
             android:id="@+id/position_tag_button"
-            android:layout_width="114dp"
-            android:layout_height="49dp"
+            android:layout_width="117dp"
+            android:layout_height="59dp"
             android:layout_marginStart="16dp"
             android:layout_marginTop="25dp"
             android:layout_marginEnd="16dp"
@@ -105,10 +106,10 @@
             app:iconSize="25dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/stopButton"
-            app:layout_constraintHorizontal_bias="0.444"
+            app:layout_constraintHorizontal_bias="0.496"
             app:layout_constraintStart_toEndOf="@+id/cancelButton"
             app:layout_constraintTop_toTopOf="@+id/timeRemainingBar"
-            app:layout_constraintVertical_bias="1.0" />
+            app:layout_constraintVertical_bias="0.09" />
 
         <Button
             android:id="@+id/mapTypeButton"
@@ -142,8 +143,8 @@
 
         <androidx.cardview.widget.CardView
             android:id="@+id/currentPositionCard"
-            android:layout_width="390dp"
-            android:layout_height="133dp"
+            android:layout_width="382dp"
+            android:layout_height="131dp"
             android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
             android:layout_marginEnd="8dp"
@@ -162,32 +163,115 @@
                     android:id="@+id/currentXPos"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginTop="56dp"
+                    android:layout_marginStart="48dp"
                     android:text="@string/x"
                     android:textColor="@color/LightYellow"
                     android:textSize="28sp"
                     android:textStyle="bold"
+                    app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintVertical_bias="0.094" />
 
                 <TextView
                     android:id="@+id/currentElevation"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
                     android:text="@string/elevation"
                     android:textColor="@color/LightYellow"
                     android:textSize="20sp"
                     android:textStyle="bold"
-                    app:layout_constraintBaseline_toBaselineOf="@+id/currentDistanceTraveled"
-                    app:layout_constraintEnd_toEndOf="parent" />
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintHorizontal_bias="0.0"
+                    app:layout_constraintStart_toStartOf="@+id/currentDistanceTraveled"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintVertical_bias="0.711" />
+
+                <TextView
+                    android:id="@+id/legend_pdr"
+                    android:layout_width="70dp"
+                    android:layout_height="22dp"
+                    android:layout_marginTop="56dp"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/pdr_short"
+                    android:textColor="@color/LightYellow"
+                    android:textSize="18sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <ImageView
+                    android:id="@+id/pdrDot"
+                    android:layout_width="27dp"
+                    android:layout_height="22dp"
+                    android:layout_marginStart="268dp"
+                    android:layout_marginTop="56dp"
+                    android:layout_marginEnd="4dp"
+                    android:src="@drawable/ic_baseline_red_dot_24"
+                    app:layout_constraintEnd_toStartOf="@+id/legend_pdr"
+                    app:layout_constraintHorizontal_bias="0.47"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:tint="@color/blue" />
+
+                <ImageView
+                    android:id="@+id/wifiDot"
+                    android:layout_width="27dp"
+                    android:layout_height="22dp"
+                    android:layout_marginStart="268dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginEnd="4dp"
+
+                    android:src="@drawable/ic_baseline_red_dot_24"
+                    app:layout_constraintEnd_toStartOf="@+id/legend_wifi"
+                    app:layout_constraintHorizontal_bias="0.47"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/pdrDot"
+                    app:tint="@color/green" />
+
+                <ImageView
+                    android:id="@+id/gnssDot"
+                    android:layout_width="27dp"
+                    android:layout_height="20dp"
+                    android:layout_marginStart="268dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:src="@drawable/ic_baseline_red_dot_24"
+                    app:layout_constraintEnd_toStartOf="@+id/legend_gnss"
+                    app:layout_constraintHorizontal_bias="0.47"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/wifiDot"
+                    app:tint="@color/red" />
+
+                <TextView
+                    android:id="@+id/legend_gnss"
+                    android:layout_width="70dp"
+                    android:layout_height="20dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/gnss"
+                    android:textColor="@color/LightYellow"
+                    android:textSize="18sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/legend_wifi" />
+
+                <TextView
+                    android:id="@+id/legend_wifi"
+                    android:layout_width="70dp"
+                    android:layout_height="20dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/wifi_short"
+                    android:textColor="@color/LightYellow"
+                    android:textSize="18sp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/legend_pdr" />
 
                 <TextView
                     android:id="@+id/currentYPos"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="16dp"
+                    android:layout_marginEnd="48dp"
                     android:text="@string/y"
                     android:textColor="@color/LightYellow"
                     android:textSize="28sp"
@@ -199,34 +283,34 @@
                     android:id="@+id/currentDistanceTraveled"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginBottom="8dp"
+                    android:layout_marginStart="56dp"
                     android:text="@string/distance_travelled"
                     android:textColor="@color/LightYellow"
                     android:textSize="20sp"
                     android:textStyle="bold"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent" />
+                    app:layout_constraintBottom_toBottomOf="@+id/elevatorImage"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@+id/currentElevation"
+                    app:layout_constraintVertical_bias="1.0" />
 
                 <ImageView
                     android:id="@+id/compass"
-                    android:layout_width="66dp"
-                    android:layout_height="74dp"
-                    android:layout_marginTop="8dp"
+                    android:layout_width="56dp"
+                    android:layout_height="65dp"
                     android:layout_marginBottom="5dp"
                     android:src="@drawable/ic_baseline_navigation_24"
-                    app:layout_constraintBottom_toTopOf="@+id/currentElevation"
+                    app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintVertical_bias="0.347" />
+                    app:layout_constraintVertical_bias="0.142" />
 
                 <ImageView
                     android:id="@+id/redDot"
                     android:layout_width="32dp"
                     android:layout_height="35dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginTop="12dp"
                     android:contentDescription="@string/recording"
                     android:src="@drawable/ic_baseline_red_dot_24"
                     app:layout_constraintStart_toStartOf="parent"
@@ -234,14 +318,19 @@
 
                 <ImageView
                     android:id="@+id/elevatorImage"
-                    android:layout_width="36dp"
-                    android:layout_height="39dp"
-                    android:layout_marginTop="8dp"
-                    android:layout_marginEnd="8dp"
+                    android:layout_width="45dp"
+                    android:layout_height="50dp"
+                    android:layout_marginStart="5dp"
+                    android:layout_marginEnd="5dp"
+                    android:layout_marginBottom="5dp"
                     android:elevation="2dp"
                     android:src="@drawable/ic_baseline_elevator_24"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@+id/currentDistanceTraveled"
+                    app:layout_constraintHorizontal_bias="0.0"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintVertical_bias="0.973" />
             </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.cardview.widget.CardView>
 

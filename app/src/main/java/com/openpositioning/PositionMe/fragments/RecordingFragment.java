@@ -68,6 +68,7 @@ import com.openpositioning.PositionMe.SensorFusionUpdates;
 import com.openpositioning.PositionMe.sensors.SensorFusion;
 import com.openpositioning.PositionMe.sensors.SensorTypes;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -91,6 +92,9 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     private Polyline trajectory_particle;
     private Polyline trajectory_gnss;
     private Polyline trajectory_kalman;
+
+    private List<Marker> pdrMarker, wifiMarker, gnssmarker, particleMarker, kalmanMarker = new ArrayList<>();
+
     //Zoom of google maps
     private float zoom = 19f;
     //Button to end PDR recording
@@ -117,8 +121,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     private TextView distanceTravelled;
     private TextView currentBuilding;
     private TextView floor_title;
-    private TextView accuracy;
-    private TextView positioning_error;
+    private TextView errorWifi, errorPDR, errorGNSS;
     //Settings spinners that allow the user to change
 //    private Spinner mapTypeSpinner;
     private Spinner floorSpinner;
@@ -141,10 +144,14 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     private double[] startPosition = new double[3];
     private double[] ecefRefCoords = new double[3];
 
+    private float[] poserrorPDR = new float[2];
+    private float[] poserrorWifi = new float[2];
+    private float[] poserrorGNSS = new float[2];
+
     //Used to manipulate the floor plans displayed and track which building the user is in.
     private BuildingManager buildingManager;
     //The coordinates of the users current position
-    private LatLng currentPosition;
+    private LatLng currentPosition, wifiPosition;
     //Stores the markers displaying the users location and GNSS position so they can be manipulated without removing and re-adding them
     private Marker GNSS_marker;
     private Marker user_marker;
@@ -210,6 +217,9 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     .title("User Position"));
             recording_map.animateCamera(CameraUpdateFactory.newLatLngZoom(position, zoom ));
 
+            user_marker = recording_map.addMarker(new MarkerOptions()
+                    .position(position)
+                    .title("User Position"));
 
             // instantiating the polylines on the map
             user_trajectory = recording_map.addPolyline(new PolylineOptions().add(position));
@@ -240,6 +250,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
             // initialise filters
             sensorFusion.initialiseParticleFilter(startPosition[0], startPosition[1], sensorFusion.getElevation());
+            System.out.println("starting logation"+startPosition);
 
 
             buildingManager = new BuildingManager(recording_map);
@@ -556,7 +567,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     LatLng user_step = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startPosition[0], startPosition[1], ecefRefCoords);
                     currentPosition = user_step;
                     updateUserTrajectory(user_step);
-                    displayPolylineAsDots(user_trajectory.getPoints(), Color.BLUE);
+                    displayPolylineAsDots(user_trajectory.getPoints(), Color.BLUE, pdrMarker);
                     user_marker.setPosition(user_step);
                 }
 
@@ -600,7 +611,31 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             @Override
             public void run() {
                 updateParticleTrajectory(particleAlgPosition);
-                displayPolylineAsDots(trajectory_particle.getPoints(), Color.YELLOW);
+                displayPolylineAsDots(trajectory_particle.getPoints(), Color.YELLOW, particleMarker);
+
+                // now update the positional errors of pdr, wifi, gnss
+                // setting the positional errors --> 1st groundtruth Kalman, 2nd ground truth Particle
+                float[] distanceBetween = new float[1];
+
+                // get current GNSS reading and compare it
+                float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
+                Location.distanceBetween(GNSS_pos[0], GNSS_pos[1], particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
+                poserrorGNSS[1] = distanceBetween[0];
+
+                // get current PDR and compare it
+                Location.distanceBetween(currentPosition.latitude, currentPosition.longitude, particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
+                poserrorPDR[1] = distanceBetween[0];
+
+                // get current wifi server position and compare it
+                if (wifiPosition == null){
+                    poserrorWifi[1] = 0;
+                }
+                else {
+                    Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
+                    poserrorWifi[1] = distanceBetween[0];
+                }
+                // update the UI
+                updatePositionError();
             }
         });
     }
@@ -618,10 +653,38 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                // display the new position as a line and points
                 updateKalmanTrajectory(kalmanAlgPosition);
-                displayPolylineAsDots(trajectory_kalman.getPoints(), Color.CYAN);
+                displayPolylineAsDots(trajectory_kalman.getPoints(), Color.CYAN, kalmanMarker);
+
+                // now update the positional errors of pdr, wifi, gnss
+                // setting the positional errors --> 1st groundtruth Kalman, 2nd ground truth Particle
+                float[] distanceBetween = new float[1];
+
+                // get current GNSS reading and compare it
+                float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
+                Location.distanceBetween(GNSS_pos[0], GNSS_pos[1], kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
+                poserrorGNSS[0] = distanceBetween[0];
+
+                // get current PDR and compare it
+                Location.distanceBetween(currentPosition.latitude, currentPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
+                poserrorPDR[0] = distanceBetween[0];
+
+                // get current wifi server position and compare it
+                Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
+                poserrorWifi[0] = distanceBetween[0];
+
+                // update the UI
+                updatePositionError();
             }
         });
+    }
+
+    private void updatePositionError(){
+        errorWifi.setText(getString(R.string.meter, String.format("%.2fm \t \t %.2fm", poserrorPDR[0], poserrorPDR[1])));
+        errorGNSS.setText(getString(R.string.meter, String.format("%.2fm \t \t %.2fm", poserrorGNSS[0], poserrorGNSS[1])));
+        errorPDR.setText(getString(R.string.meter, String.format("%.2fm  \t \t %.2fm",  poserrorPDR[0], poserrorPDR[1])));
+
     }
 
 
@@ -639,10 +702,9 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 if (showGNSS!= null && showGNSS.isChecked()) {
                     updateGNSSInfo();
                 }
-                // todo correct this part!!!
                 float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
                 updateGNSSTrajectory(new LatLng(GNSS_pos[0] , GNSS_pos[1]));
-                displayPolylineAsDots(trajectory_gnss.getPoints(), Color.RED);
+                displayPolylineAsDots(trajectory_gnss.getPoints(), Color.RED, gnssmarker);
                 System.out.println("gnss was displayed" + currentPosition);
             }
         });
@@ -662,10 +724,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         } else {
             GNSS_marker.setPosition(new LatLng(GNSS_pos[0],GNSS_pos[1]));
         }
-        accuracy.setText(getString(R.string.meter, String.format("%.2f", GNNS_accuracy)));
-        float[] distanceBetween = new float[1];
-        Location.distanceBetween(GNSS_pos[0], GNSS_pos[1], currentPosition.latitude, currentPosition.longitude, distanceBetween);
-        positioning_error.setText(getString(R.string.meter, String.format("%.2f", distanceBetween[0])));
     }
 
     /**
@@ -696,7 +754,8 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             @Override
             public void run() {
                 updateWifiTrajectory(latlngFromWifiServer);
-                displayPolylineAsDots(trajectory_wifi.getPoints(), Color.GREEN);
+                displayPolylineAsDots(trajectory_wifi.getPoints(), Color.GREEN, wifiMarker);
+                wifiPosition = latlngFromWifiServer;
             }
         });
     }
@@ -747,12 +806,12 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         }
     }
 
-    private void displayPolylineAsDots(List<LatLng> points, int dotColor) {
+    private void displayPolylineAsDots(List<LatLng> points, int dotColor, List<Marker> listOfMarkers) {
         Marker dotOnMap;
-        int numberPoints = points.size();
-//        for (int i = numberPoints-8; i < numberPoints; i++) {
-//
-//        }
+//        int numberPoints = points.size();
+////        for (int i = numberPoints-8; i < numberPoints; i++) {
+////
+////        }
         for (LatLng point : points) {
             Drawable vectorDrawable = ContextCompat.getDrawable(this.getContext(), R.drawable.radio_button_checked_24px);
             vectorDrawable.setColorFilter(dotColor, PorterDuff.Mode.SRC_IN);
@@ -764,13 +823,35 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             vectorDrawable.draw(canvas);
             BitmapDescriptor bitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap);
 
-
             dotOnMap = recording_map.addMarker(new MarkerOptions()
                     .position(point)
                     .icon(bitmapDescriptor)
                     .anchor(0.5f, 0.5f) // to make it in centre
             );
         }
+
+        // if there are not points
+//        if (points == null){
+//            return;
+//        }
+//
+//        // converts vector to bitmap
+//        Drawable vectorDrawable = ContextCompat.getDrawable(this.getContext(), R.drawable.radio_button_checked_24px);
+//        vectorDrawable.setColorFilter(dotColor, PorterDuff.Mode.SRC_IN);
+//        Bitmap bitmap = Bitmap.createBitmap(vectorDrawable.getIntrinsicWidth(),
+//                vectorDrawable.getIntrinsicHeight(),
+//                Bitmap.Config.ARGB_8888);
+//        Canvas canvas = new Canvas(bitmap);
+//        vectorDrawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+//        vectorDrawable.draw(canvas);
+//        BitmapDescriptor bitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap);
+//
+//        for (LatLng point : points ) {
+//            MarkerOptions markerOptions = new MarkerOptions()
+//                    .position(point)
+//                    .icon(bitmapDescriptor); // Set dot color as desired
+//            listOfMarkers.add(recording_map.addMarker(markerOptions.anchor(0.5f, 0.5f)););
+//        }
     }
 
     /**
@@ -1030,11 +1111,17 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 if (isChecked){
                     if (trajectory_wifi != null){
                         trajectory_wifi.setVisible(true);
+                        for (Marker marker : wifiMarker) {
+                            marker.setVisible(true);
+                        }
                     }
                 }
                 else{
                     if (trajectory_wifi != null){
                         trajectory_wifi.setVisible(false);
+                        for (Marker marker : wifiMarker) {
+                            marker.setVisible(false);
+                        }
                     }
                 }
             }
@@ -1048,11 +1135,17 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 if (isChecked){
                     if (trajectory_gnss != null){
                         trajectory_gnss.setVisible(true);
+//                        for (Marker marker : gnssmarker) {
+//                            marker.setVisible(true);
+//                        }
                     }
                 }
                 else{
                     if (trajectory_gnss != null){
                         trajectory_gnss.setVisible(false);
+//                        for (Marker marker : gnssmarker) {
+//                            marker.setVisible(false);
+//                        }
                     }
                 }
             }
@@ -1096,13 +1189,18 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
         
         this.floorSpinner = recordingSettingsDialog.findViewById(R.id.floorSpinner);
-//        this.floorSpinner = getView().findViewById(R.id.floorSpinner);
         this.floorSpinner.setVisibility(View.GONE);
 
         this.floor_title = recordingSettingsDialog.findViewById(R.id.floor_title);
         this.currentBuilding = recordingSettingsDialog.findViewById(R.id.curBuilding);
-        this.positioning_error = recordingSettingsDialog.findViewById(R.id.pos_error);
-        this.accuracy = recordingSettingsDialog.findViewById(R.id.accuracy);
+
+        // setting the position error TextView
+        this.errorPDR = recordingSettingsDialog.findViewById(R.id.errorParticlepdr);
+        this.errorWifi = recordingSettingsDialog.findViewById(R.id.errorParticlewifi);
+        this.errorGNSS = recordingSettingsDialog.findViewById(R.id.errParticlegnss);
+
+
+        // turn on button to display the POSITION ERRORS
         this.showGNSS = recordingSettingsDialog.findViewById(R.id.toggleGNSS);
         this.showGNSS.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -1111,15 +1209,28 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     if (GNSS_marker != null){
                         GNSS_marker.remove();
                     }
-                    recordingSettingsDialog.findViewById(R.id.accuracy_title).setVisibility(View.GONE);
-                    recordingSettingsDialog.findViewById(R.id.pos_error_title).setVisibility(View.GONE);
-                    accuracy.setVisibility(View.GONE);
-                    positioning_error.setVisibility(View.GONE);
+                    // hide the titles
+                    recordingSettingsDialog.findViewById(R.id.error_title).setVisibility(View.GONE);
+                    recordingSettingsDialog.findViewById(R.id.error_pdr).setVisibility(View.GONE);
+                    recordingSettingsDialog.findViewById(R.id.error_gnss).setVisibility(View.GONE);
+                    recordingSettingsDialog.findViewById(R.id.error_wifi).setVisibility(View.GONE);
+
+                    // hide the printed data
+                    errorPDR.setVisibility(View.GONE);
+                    errorWifi.setVisibility(View.GONE);
+                    errorGNSS.setVisibility(View.GONE);
+
                 } else {
-                    recordingSettingsDialog.findViewById(R.id.accuracy_title).setVisibility(View.VISIBLE);
-                    recordingSettingsDialog.findViewById(R.id.pos_error_title).setVisibility(View.VISIBLE);
-                    accuracy.setVisibility(View.VISIBLE);
-                    positioning_error.setVisibility(View.VISIBLE);
+                    // show the titles
+                    recordingSettingsDialog.findViewById(R.id.error_title).setVisibility(View.VISIBLE);
+                    recordingSettingsDialog.findViewById(R.id.error_wifi).setVisibility(View.VISIBLE);
+                    recordingSettingsDialog.findViewById(R.id.error_gnss).setVisibility(View.VISIBLE);
+                    recordingSettingsDialog.findViewById(R.id.error_pdr).setVisibility(View.VISIBLE);
+
+                    // show the displayed data
+                    errorPDR.setVisibility(View.VISIBLE);
+                    errorWifi.setVisibility(View.VISIBLE);
+                    errorGNSS.setVisibility(View.VISIBLE);
 
                     updateGNSSInfo();
                 }

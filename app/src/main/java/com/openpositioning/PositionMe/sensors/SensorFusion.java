@@ -136,6 +136,9 @@ public class SensorFusion implements SensorEventListener, Observer {
     private float GNSS_accuracy;
     private float[] startLocation;
     private double[] startRef;
+
+    private boolean runKalmanFilter, runParticleFilter;
+
     // Wifi values
     private List<Wifi> wifiList;
 
