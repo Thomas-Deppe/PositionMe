@@ -579,7 +579,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             @Override
             public void run() {
                 compassIcon.setRotation((float) Math.toDegrees(sensorFusion.passOrientation()));
-                user_marker.setRotation((float) Math.toDegrees(sensorFusion.passOrientation()));
                 //compassIcon.setRotation((float) -Math.toDegrees(sensorFusion.passOrientation()));
             }
         });
@@ -597,8 +596,10 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                updateParticleTrajectory(particleAlgPosition);
-                displayPolylineAsDots(trajectory_particle.getPoints(), Color.YELLOW);
+                if (particleAlgPosition != null && trajectory_particle != null) {
+                    updateParticleTrajectory(particleAlgPosition);
+                    displayPolylineAsDots(trajectory_particle.getPoints(), Color.YELLOW);
+                }
             }
         });
     }

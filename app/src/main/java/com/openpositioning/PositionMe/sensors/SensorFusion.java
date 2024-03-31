@@ -192,8 +192,6 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.startRef = new double[3];
 
         this.recordingUpdates = new ArrayList<>();
-
-        this.extendedKalmanFilter = new ExtendedKalmanFilter();
     }
 
 
@@ -356,7 +354,7 @@ public class SensorFusion implements SensorEventListener, Observer {
                 float[] newCords = this.pdrProcessing.updatePdr(stepTime, this.accelMagnitude, this.orientation[0]);
                 float step_length = this.pdrProcessing.getStepLength();
                 //update fusion processing algorithm with new PDR
-                this.extendedKalmanFilter.predict(this.orientation[0], step_length);
+                this.extendedKalmanFilter.predict(this.orientation[0], step_length, passAverageStepLength());
                 this.updateFusionPDR();
 
                 // PDR to display
@@ -1129,13 +1127,15 @@ public class SensorFusion implements SensorEventListener, Observer {
 
         // call fusion algorithm arg(double, double)
         particleFilter.update(latitude, longitude);
+        this.extendedKalmanFilter.onStepDetected(pdrValues[0], pdrValues[1], elevationVal,
+                passOrientation(), this.pdrProcessing.getStepLength(),
+                (android.os.SystemClock.uptimeMillis() - bootTime));
     }
 
     public void updateFusionWifi(JSONObject wifiresponse){
 
         try {
             System.out.println("===== in update particle fusion ====");
-
             double latitude = wifiresponse.getDouble("lat");
             double longitude = wifiresponse.getDouble("lon");
             double floor = wifiresponse.getDouble("floor");
@@ -1147,6 +1147,10 @@ public class SensorFusion implements SensorEventListener, Observer {
             // todo: error checking - in case the latlng are 0,0
             // call fusion algorithm
             particleFilter.update(latitude, longitude);
+            this.extendedKalmanFilter.onOpportunisticUpdate(
+                    CoordinateTransform.geodeticToEnu(latitude, longitude, getElevation(), startRef[0], startRef[1], startRef[2]),
+                    (android.os.SystemClock.uptimeMillis() - bootTime)
+            );
 
         } catch (JSONException e) {
             e.printStackTrace();
@@ -1157,16 +1161,17 @@ public class SensorFusion implements SensorEventListener, Observer {
 
         // call fusion algorithm
         particleFilter.update(latitude, longitude);
-        double[] pdrCalc = getCurrentPDRCalc();
+        //double[] pdrCalc = getCurrentPDRCalc();
 
-        double[] enuCoords = CoordinateTransform.geodeticToEnu(latitude, longitude, altitude, startRef[0], startRef[1], startRef[2]);
-        Log.d("EKF:", "ENU coordinates East " +enuCoords[0]+" North "+enuCoords[1]+" Up "+enuCoords[2]);
-        extendedKalmanFilter.onObservationUpdate(enuCoords[0], enuCoords[1], pdrCalc[0], pdrCalc[1], getElevation());
+        //double[] enuCoords = CoordinateTransform.geodeticToEnu(latitude, longitude, altitude, startRef[0], startRef[1], startRef[2]);
+        //Log.d("EKF:", "ENU coordinates East " +enuCoords[0]+" North "+enuCoords[1]+" Up "+enuCoords[2]);
+        //extendedKalmanFilter.onObservationUpdate(enuCoords[0], enuCoords[1], pdrCalc[0], pdrCalc[1], getElevation());
     }
 
 
-    public void initialiseParticleFilter(double initialLat, double initialLong, double initialAlt){
-        particleFilter = new ParticleFilter(initialLat, initialLong, initialAlt);
+    public void initialiseFusionAlgorithm(double initialLat, double initialLong, double initialAlt){
+        this.particleFilter = new ParticleFilter(initialLat, initialLong, initialAlt);
+        this.extendedKalmanFilter = new ExtendedKalmanFilter();
     }
 
 
