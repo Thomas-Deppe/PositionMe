@@ -574,7 +574,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     LatLng user_step = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startPosition[0], startPosition[1], ecefRefCoords);
                     currentPosition = user_step;
                     updateUserTrajectory(user_step);
-                    displayPolylineAsDots(user_trajectory.getPoints(), Color.BLUE, pdrMarker);
+                    displayPolylineAsDots(user_trajectory.getPoints(), Color.BLUE, pdrMarker, displayPRDToggle.isChecked());
 //                    user_marker.setPosition(user_step);
                 }
 
@@ -618,9 +618,10 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                if (recording_map == null){return;}
                 if (particleAlgPosition != null && trajectory_particle != null) {
                     updateParticleTrajectory(particleAlgPosition);
-                    displayPolylineAsDots(trajectory_particle.getPoints(), Color.YELLOW, particleMarker);
+                    displayPolylineAsDots(trajectory_particle.getPoints(), Color.YELLOW, particleMarker, displayParticleToggle.isChecked());
 
                     // todo: set the marker to this trajectory as ground truth
                     if (!sensorFusion.getEnableFusionAlgorithms()){
@@ -635,18 +636,18 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                         // get current GNSS reading and compare it
                         float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
                         Location.distanceBetween(GNSS_pos[0], GNSS_pos[1], particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
-                        poserrorGNSS[1] = distanceBetween[0];
+                        poserrorGNSS[0] = distanceBetween[0];
 
                         // get current PDR and compare it
                         Location.distanceBetween(currentPosition.latitude, currentPosition.longitude, particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
-                        poserrorPDR[1] = distanceBetween[0];
+                        poserrorPDR[0] = distanceBetween[0];
 
                         // get current wifi server position and compare it
                         if (wifiPosition == null) {
-                            poserrorWifi[1] = 0;
+                            poserrorWifi[0] = 0;
                         } else {
                             Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
-                            poserrorWifi[1] = distanceBetween[0];
+                            poserrorWifi[0] = distanceBetween[0];
                         }
                         // update the UI
                         updatePositionError();
@@ -670,16 +671,16 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             @Override
             public void run() {
                 // display the new position as a line and points
+                if (recording_map == null){return;}
+
                 updateKalmanTrajectory(kalmanAlgPosition);
-                displayPolylineAsDots(trajectory_kalman.getPoints(), Color.CYAN, kalmanMarker);
+                displayPolylineAsDots(trajectory_kalman.getPoints(), Color.CYAN, kalmanMarker, displayKalmanToggle.isChecked());
 
 
                 // if kalman filter is selected to run
                 if (sensorFusion.getEnableFusionAlgorithms()){
                     currFusionPosition = kalmanAlgPosition;
                     user_marker.setPosition(kalmanAlgPosition);
-                    // todo: set the rotation
-//                    user_marker.setRotation((float) Math.toDegrees(sensorFusion.passOrientation()));
                 }
                 else{return;}
 
@@ -688,35 +689,36 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     // setting the positional errors --> 1st groundtruth Kalman, 2nd ground truth Particle
                     float[] distanceBetween = new float[1];
 
-                    // get current GNSS reading and compare it
-                    float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
-                    Location.distanceBetween(GNSS_pos[0], GNSS_pos[1], kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
-                    poserrorGNSS[0] = distanceBetween[0];
+                    if (sensorFusion.getEnableFusionAlgorithms()) {
+                        // get current GNSS reading and compare it
+                        float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
+                        Location.distanceBetween(GNSS_pos[0], GNSS_pos[1], kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
+                        poserrorGNSS[0] = distanceBetween[0];
 
-                    // get current PDR and compare it
-                    Location.distanceBetween(currentPosition.latitude, currentPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
-                    poserrorPDR[0] = distanceBetween[0];
+                        // get current PDR and compare it
+                        Location.distanceBetween(currentPosition.latitude, currentPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
+                        poserrorPDR[0] = distanceBetween[0];
 
-                    // get current wifi server position and compare it
-                    if (wifiPosition == null){
-                        poserrorWifi[1] = 0;
+                        // get current wifi server position and compare it
+                        if (wifiPosition == null) {
+                            poserrorWifi[1] = 0;
+                        } else {
+                            Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
+                            poserrorWifi[0] = distanceBetween[0];
+                        }
+
+                        // update the UI
+                        updatePositionError();
                     }
-                    else {
-                        Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
-                        poserrorWifi[0] = distanceBetween[0];
-                    }
-
-                    // update the UI
-                    updatePositionError();
                 }
             }
         });
     }
 
     private void updatePositionError(){
-        errorWifi.setText(getString(R.string.meter, String.format("%.2fm \t \t %.2fm", poserrorPDR[0], poserrorPDR[1])));
-        errorGNSS.setText(getString(R.string.meter, String.format("%.2fm \t \t %.2fm", poserrorGNSS[0], poserrorGNSS[1])));
-        errorPDR.setText(getString(R.string.meter, String.format("%.2fm  \t \t %.2fm",  poserrorPDR[0], poserrorPDR[1])));
+        errorWifi.setText(getString(R.string.meter, String.format("%.2f", poserrorPDR[0])));
+        errorGNSS.setText(getString(R.string.meter, String.format("%.2f", poserrorGNSS[0])));
+        errorPDR.setText(getString(R.string.meter, String.format("%.2f",  poserrorPDR[0])));
 
     }
 
@@ -732,12 +734,13 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                if (recording_map == null){return;}
                 if (showGNSS!= null && showGNSS.isChecked()) {
                     updateGNSSInfo();
                 }
                 float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
                 updateGNSSTrajectory(new LatLng(GNSS_pos[0] , GNSS_pos[1]));
-                displayPolylineAsDots(trajectory_gnss.getPoints(), Color.RED, gnssmarker);
+                displayPolylineAsDots(trajectory_gnss.getPoints(), Color.RED, gnssmarker, displayGNSSToggle.isChecked());
                 System.out.println("gnss was displayed" + currentPosition);
             }
         });
@@ -786,9 +789,10 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                updateWifiTrajectory(latlngFromWifiServer);
-                displayPolylineAsDots(trajectory_wifi.getPoints(), Color.GREEN, wifiMarker);
                 wifiPosition = latlngFromWifiServer;
+                if (recording_map == null){return;}
+                updateWifiTrajectory(latlngFromWifiServer);
+                displayPolylineAsDots(trajectory_wifi.getPoints(), Color.GREEN, wifiMarker, displayWifiToggle.isChecked());
             }
         });
     }
@@ -864,33 +868,40 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         return interpolatedPoints;
     }
 
-    private void displayPolylineAsDots(List<LatLng> points, int dotColor, List<Marker> listOfMarkers) {
-        Marker dotOnMap;
-//        int numberPoints = points.size();
-////        for (int i = numberPoints-8; i < numberPoints; i++) {
-////
-////        }
-//        for (LatLng point : points) {
-//            dotOnMap = recording_map.addMarker(new MarkerOptions()
-//                    .position(point)
-//                    .icon(convertVectorToBitmap(this.getContext(), dotColor, R.drawable.radio_button_checked_24px))
-//                    .anchor(0.5f, 0.5f) // to make it in centre
-//            );
-//        }
+    private void displayPolylineAsDots(List<LatLng> points, int dotColor, List<Marker> listOfMarkers, boolean enabledDisplay) {
 
-//         if there are not points
         if (points == null){
             return;
         }
 
-        else {
-            // create a new marker at the last element position
-            MarkerOptions markerOptions = new MarkerOptions()
+        // create a new marker and add it to the list array
+        MarkerOptions markerOptions = new MarkerOptions()
                     .position(points.get(points.size() - 1))
-                    .icon(convertVectorToBitmap(this.getContext(), dotColor, R.drawable.radio_button_checked_24px));
-            listOfMarkers.add(recording_map.addMarker(markerOptions.anchor(0.5f, 0.5f)));
+                    .icon(convertVectorToBitmap(this.getContext(), dotColor, R.drawable.ic_market_dot));
+        listOfMarkers.add(recording_map.addMarker(markerOptions.anchor(0.5f, 0.5f) .visible(false)));
+
+        // if the list array is almost full, remove the oldest marker
+        if (listOfMarkers.size()-1 > 5){
+            listOfMarkers.get(0).setVisible(false);
+            listOfMarkers.remove(0);
         }
 
+        // if the display is enable, show them
+        if (enabledDisplay){
+            for (Marker marker : listOfMarkers){
+                marker.setVisible(true);
+            }
+            System.out.println("display points " + dotColor + " " + " " + listOfMarkers.size());
+        }
+
+    }
+
+
+    public void displayLastNDots(List<Marker> markers, boolean onOroff){
+        for (Marker marker : markers) {
+            System.out.println("wifi here less than 3" + markers.size());
+            marker.setVisible(onOroff);
+        }
     }
 
 
@@ -1133,17 +1144,13 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 if (isChecked){
                     if (user_trajectory != null){
                         user_trajectory.setVisible(true);
-                        for (Marker marker : pdrMarker) {
-                            marker.setVisible(true);
-                        }
+                        displayLastNDots(pdrMarker, true);
                     }
                 }
                 else{
                     if (user_trajectory != null){
                         user_trajectory.setVisible(false);
-                        for (Marker marker : pdrMarker) {
-                            marker.setVisible(false);
-                        }
+                        displayLastNDots(pdrMarker, false);
                     }
                 }
             }
@@ -1157,17 +1164,13 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 if (isChecked){
                     if (trajectory_wifi != null){
                         trajectory_wifi.setVisible(true);
-                        for (Marker marker : wifiMarker) {
-                            marker.setVisible(true);
-                        }
+                        displayLastNDots(wifiMarker, true);
                     }
                 }
                 else{
                     if (trajectory_wifi != null){
                         trajectory_wifi.setVisible(false);
-                        for (Marker marker : wifiMarker) {
-                            marker.setVisible(false);
-                        }
+                        displayLastNDots(wifiMarker, false);
                     }
                 }
             }
@@ -1181,17 +1184,13 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 if (isChecked){
                     if (trajectory_gnss != null){
                         trajectory_gnss.setVisible(true);
-                        for (Marker marker : gnssmarker) {
-                            marker.setVisible(true);
-                        }
+                        displayLastNDots(gnssmarker, true);
                     }
                 }
                 else{
                     if (trajectory_gnss != null){
                         trajectory_gnss.setVisible(false);
-                        for (Marker marker : gnssmarker) {
-                            marker.setVisible(false);
-                        }
+                        displayLastNDots(gnssmarker, false);
                     }
                 }
             }
@@ -1205,17 +1204,13 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 if (isChecked){
                     if (trajectory_kalman != null){
                         trajectory_kalman.setVisible(true);
-                        for (Marker marker : kalmanMarker) {
-                            marker.setVisible(true);
-                        }
+                        displayLastNDots(kalmanMarker, true);
                     }
                 }
                 else{
                     if (trajectory_kalman != null){
                         trajectory_kalman.setVisible(false);
-                        for (Marker marker : kalmanMarker) {
-                            marker.setVisible(false);
-                        }
+                        displayLastNDots(kalmanMarker, false);
                     }
                 }
             }
@@ -1229,17 +1224,13 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 if (isChecked){
                     if (trajectory_particle != null){
                         trajectory_particle.setVisible(true);
-                        for (Marker marker : particleMarker) {
-                            marker.setVisible(true);
-                        }
+                        displayLastNDots(particleMarker, true);
                     }
                 }
                 else{
                     if (trajectory_particle != null){
                         trajectory_particle.setVisible(false);
-                        for (Marker marker : particleMarker) {
-                            marker.setVisible(false);
-                        }
+                        displayLastNDots(particleMarker, false);
                     }
                 }
             }

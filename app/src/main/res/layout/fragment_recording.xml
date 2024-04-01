@@ -39,7 +39,7 @@
             android:layout_marginStart="8dp"
             android:layout_marginBottom="12dp"
             android:background="@drawable/round_button"
-            android:paddingLeft="12pt"
+            android:paddingLeft="12.5pt"
             app:icon="@drawable/ic_baseline_cancel_24"
             app:iconGravity="textStart"
             app:iconSize="30dp"

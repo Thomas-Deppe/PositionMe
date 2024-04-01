@@ -86,7 +86,7 @@
     <string name="error_pdr">PDR error:\t \t</string>
     <string name="error_wifi">Wifi error:\t \t</string>
     <string name="error_gnss">GNSS error:</string>
-    <string name="error_title">\t Kalman Filter \t \t Particle Filter</string>
+    <string name="error_title">\t \t Fusion Algorithm (Ground Truth) </string>
 
 
     <!-- Units only -->
