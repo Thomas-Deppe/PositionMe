@@ -9,6 +9,7 @@ import com.openpositioning.PositionMe.OutlierDetector;
 
 import org.ejml.simple.SimpleMatrix;
 
+
 public class ExtendedKalmanFilter {
 
     private static long relevanceThreshold = 5000;
@@ -198,10 +199,10 @@ public class ExtendedKalmanFilter {
             return;
         }
 
-        if (checkRelevance(refTime)){
-            onObservationUpdate(lastOpportunisticUpdate[0], lastOpportunisticUpdate[1], pdrEast, pdrNorth, altitude);
-            return;
-        }
+//        if (checkRelevance(refTime)){
+//            onObservationUpdate(lastOpportunisticUpdate[0], lastOpportunisticUpdate[1], pdrEast, pdrNorth, altitude, );
+//            return;
+//        }
 
         performRecursiveCorrection(pdrEast, pdrNorth, altitude);
     }

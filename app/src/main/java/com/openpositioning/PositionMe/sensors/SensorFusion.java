@@ -758,9 +758,13 @@ public class SensorFusion implements SensorEventListener, Observer {
      */
     public void notifyParticleUpdate(LatLng particle_pos){
         positionParticle = particle_pos;
+
         for (SensorFusionUpdates observer : recordingUpdates) {
             observer.onParticleUpdate(particle_pos);
         }
+
+        // store the value - ID, timestamp, latlng
+        System.out.println("PARTICLE " + System.currentTimeMillis() + " " + particle_pos);
     }
 
     /**
@@ -771,6 +775,8 @@ public class SensorFusion implements SensorEventListener, Observer {
         for (SensorFusionUpdates observer : recordingUpdates) {
             observer.onKalmanUpdate(kalman_pos);
         }
+        // store the value - ID, timestamp, latlng
+        System.out.println("KALMAN " + System.currentTimeMillis() + " " + kalman_pos);
     }
 
     /**
@@ -1085,6 +1091,9 @@ public class SensorFusion implements SensorEventListener, Observer {
                     passOrientation(), this.pdrProcessing.getStepLength(),
                     (android.os.SystemClock.uptimeMillis() - bootTime));
         }
+
+        // store the value - ID, timestamp, latlng
+        System.out.println("PDR " + System.currentTimeMillis() + " " + positionPDR);
     }
 
     public void updateFusionWifi(JSONObject wifiresponse){
@@ -1110,6 +1119,10 @@ public class SensorFusion implements SensorEventListener, Observer {
                         (android.os.SystemClock.uptimeMillis() - bootTime)
                 );
             }
+
+            // store the value - ID, timestamp, latlng
+            System.out.println("WIFI " + System.currentTimeMillis() + " " + positionWifi);
+
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -1122,6 +1135,8 @@ public class SensorFusion implements SensorEventListener, Observer {
             particleFilter.update(latitude, longitude);
             //double[] pdrCalc = getCurrentPDRCalc();
         }
+        // store the value - ID, timestamp, latlng
+        System.out.println("GNSS " + System.currentTimeMillis() + " " + new LatLng(latitude,longitude));
         //double[] enuCoords = CoordinateTransform.geodeticToEnu(latitude, longitude, altitude, startRef[0], startRef[1], startRef[2]);
         //Log.d("EKF:", "ENU coordinates East " +enuCoords[0]+" North "+enuCoords[1]+" Up "+enuCoords[2]);
         //extendedKalmanFilter.onObservationUpdate(enuCoords[0], enuCoords[1], pdrCalc[0], pdrCalc[1], getElevation());
