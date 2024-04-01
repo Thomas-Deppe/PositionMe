@@ -156,7 +156,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     //Stores the markers displaying the users location and GNSS position so they can be manipulated without removing and re-adding them
     private Marker GNSS_marker;
     private Marker user_marker;
-    private Marker fusion_marker;
+
 
     //The users current floor. The user is expected to start on the ground floor.
     private int currentFloor = 0;
@@ -211,18 +211,16 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
             // Add a marker in current GPS location and move the camera
             startPosition = sensorFusion.getGNSSLatLngAlt(true);
-            ecefRefCoords = CoordinateTransform.geodeticToEcef(startPosition[0],startPosition[1], startPosition[2]);
+            ecefRefCoords = sensorFusion.getEcefRefCoords();
+            //ecefRefCoords = CoordinateTransform.geodeticToEcef(startPosition[0],startPosition[1], startPosition[2]);
             LatLng position = new LatLng(startPosition[0], startPosition[1]);
 
             //LatLng position = new LatLng(55.922431222785264, -3.1724382435880134);
             user_marker = recording_map.addMarker(new MarkerOptions()
                     .position(position)
+                    .icon(convertVectorToBitmap(getContext(), Color.BLACK, R.drawable.ic_baseline_navigation_24))
                     .title("User Position"));
             recording_map.animateCamera(CameraUpdateFactory.newLatLngZoom(position, zoom ));
-
-            user_marker = recording_map.addMarker(new MarkerOptions()
-                    .position(position)
-                    .title("User Position"));
 
             // instantiating the polylines on the map
             user_trajectory = recording_map.addPolyline(new PolylineOptions().add(position));
@@ -231,7 +229,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             trajectory_particle = recording_map.addPolyline(new PolylineOptions().add(position));
             trajectory_kalman = recording_map.addPolyline(new PolylineOptions().add(position));
 
-            // setting different colur of the polylines
+            // setting different colour of the polylines
             user_trajectory.setColor(Color.BLUE);
             trajectory_wifi.setColor(Color.GREEN);
             trajectory_gnss.setColor(Color.RED);
@@ -424,7 +422,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
 
         // Button for choosing thhe current position as the reference point for the filters
-        this.posTagButton = getView().findViewById(R.id.recentre_button);
+        this.posTagButton = getView().findViewById(R.id.position_tag_button);
         this.posTagButton.setOnClickListener(new View.OnClickListener() {
             /**
              * {@inheritDoc}
@@ -434,7 +432,9 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
              */
             @Override
             public void onClick(View view) {
-                sensorFusion.addFusionTagTraj(currFusionPosition);
+                if (currFusionPosition != null) {
+                    sensorFusion.addFusionTagTraj(currFusionPosition);
+                }
             }
         });
 
@@ -573,7 +573,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     currentPosition = user_step;
                     updateUserTrajectory(user_step);
                     displayPolylineAsDots(user_trajectory.getPoints(), Color.BLUE, pdrMarker);
-                    user_marker.setPosition(user_step);
+//                    user_marker.setPosition(user_step);
                 }
 
                 // Calculate distance travelled
@@ -598,7 +598,9 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             @Override
             public void run() {
                 compassIcon.setRotation((float) Math.toDegrees(sensorFusion.passOrientation()));
-                //compassIcon.setRotation((float) -Math.toDegrees(sensorFusion.passOrientation()));
+                if (recording_map != null) {
+                    user_marker.setRotation((float) Math.toDegrees(sensorFusion.passOrientation()));
+                }
             }
         });
     }
@@ -611,7 +613,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
      */
     @Override
     public void onParticleUpdate(LatLng particleAlgPosition){
-        // todo: display new point on the map -- fusion trajectory
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -619,7 +620,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     updateParticleTrajectory(particleAlgPosition);
                     displayPolylineAsDots(trajectory_particle.getPoints(), Color.YELLOW, particleMarker);
 
-                    // todo
+                    // todo: set the marker to this trajectory as ground truth
                     if (!sensorFusion.getEnableFusionAlgorithms()){
                         currFusionPosition = particleAlgPosition;
                     }
@@ -662,7 +663,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
      */
     @Override
     public void onKalmanUpdate(LatLng kalmanAlgPosition){
-        // todo: display new point on the map -- fusion trajectory
+
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -674,6 +675,9 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 // if kalman filter is selected to run
                 if (sensorFusion.getEnableFusionAlgorithms()){
                     currFusionPosition = kalmanAlgPosition;
+                    user_marker.setPosition(kalmanAlgPosition);
+                    // todo: set the rotation
+//                    user_marker.setRotation((float) Math.toDegrees(sensorFusion.passOrientation()));
                 }
                 else{return;}
 
@@ -692,8 +696,13 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     poserrorPDR[0] = distanceBetween[0];
 
                     // get current wifi server position and compare it
-                    Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
-                    poserrorWifi[0] = distanceBetween[0];
+                    if (wifiPosition == null){
+                        poserrorWifi[1] = 0;
+                    }
+                    else {
+                        Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
+                        poserrorWifi[0] = distanceBetween[0];
+                    }
 
                     // update the UI
                     updatePositionError();
@@ -860,19 +869,9 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 ////
 ////        }
         for (LatLng point : points) {
-            Drawable vectorDrawable = ContextCompat.getDrawable(this.getContext(), R.drawable.radio_button_checked_24px);
-            vectorDrawable.setColorFilter(dotColor, PorterDuff.Mode.SRC_IN);
-            Bitmap bitmap = Bitmap.createBitmap(vectorDrawable.getIntrinsicWidth(),
-                    vectorDrawable.getIntrinsicHeight(),
-                    Bitmap.Config.ARGB_8888);
-            Canvas canvas = new Canvas(bitmap);
-            vectorDrawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
-            vectorDrawable.draw(canvas);
-            BitmapDescriptor bitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap);
-
             dotOnMap = recording_map.addMarker(new MarkerOptions()
                     .position(point)
-                    .icon(bitmapDescriptor)
+                    .icon(convertVectorToBitmap(this.getContext(), dotColor, R.drawable.radio_button_checked_24px))
                     .anchor(0.5f, 0.5f) // to make it in centre
             );
         }
@@ -1246,7 +1245,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         this.errorWifi = recordingSettingsDialog.findViewById(R.id.errorParticlewifi);
         this.errorGNSS = recordingSettingsDialog.findViewById(R.id.errParticlegnss);
 
-
         // turn on button to display the POSITION ERRORS
         this.showGNSS = recordingSettingsDialog.findViewById(R.id.toggleGNSS);
         this.showGNSS.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -1362,6 +1360,22 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
         AlertDialog customAlertDialog = alertDialog.create();
         customAlertDialog.show();
+    }
+
+    public BitmapDescriptor convertVectorToBitmap(Context context, int Color, int drawable_id){
+
+        Drawable vectorDrawable = ContextCompat.getDrawable(context, drawable_id);
+        if (Color != -1) {
+            vectorDrawable.setColorFilter(Color, PorterDuff.Mode.SRC_IN);
+        }
+        Bitmap bitmap = Bitmap.createBitmap(vectorDrawable.getIntrinsicWidth(),
+                vectorDrawable.getIntrinsicHeight(),
+                Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        vectorDrawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+        vectorDrawable.draw(canvas);
+
+        return BitmapDescriptorFactory.fromBitmap(bitmap);
     }
 
 }
