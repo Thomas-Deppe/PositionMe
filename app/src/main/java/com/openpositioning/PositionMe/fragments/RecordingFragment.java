@@ -93,7 +93,11 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     private Polyline trajectory_gnss;
     private Polyline trajectory_kalman;
 
-    private List<Marker> pdrMarker, wifiMarker, gnssmarker, particleMarker, kalmanMarker = new ArrayList<>();
+    private List<Marker> pdrMarker = new ArrayList<>(),
+            wifiMarker = new ArrayList<>(),
+            gnssmarker = new ArrayList<>(),
+            particleMarker = new ArrayList<>(),
+            kalmanMarker = new ArrayList<>();
 
     //Zoom of google maps
     private float zoom = 19f;
@@ -841,36 +845,27 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 ////        for (int i = numberPoints-8; i < numberPoints; i++) {
 ////
 ////        }
-        for (LatLng point : points) {
-            dotOnMap = recording_map.addMarker(new MarkerOptions()
-                    .position(point)
-                    .icon(convertVectorToBitmap(this.getContext(), dotColor, R.drawable.radio_button_checked_24px))
-                    .anchor(0.5f, 0.5f) // to make it in centre
-            );
+//        for (LatLng point : points) {
+//            dotOnMap = recording_map.addMarker(new MarkerOptions()
+//                    .position(point)
+//                    .icon(convertVectorToBitmap(this.getContext(), dotColor, R.drawable.radio_button_checked_24px))
+//                    .anchor(0.5f, 0.5f) // to make it in centre
+//            );
+//        }
+
+//         if there are not points
+        if (points == null){
+            return;
         }
 
-        // if there are not points
-//        if (points == null){
-//            return;
-//        }
-//
-//        // converts vector to bitmap
-//        Drawable vectorDrawable = ContextCompat.getDrawable(this.getContext(), R.drawable.radio_button_checked_24px);
-//        vectorDrawable.setColorFilter(dotColor, PorterDuff.Mode.SRC_IN);
-//        Bitmap bitmap = Bitmap.createBitmap(vectorDrawable.getIntrinsicWidth(),
-//                vectorDrawable.getIntrinsicHeight(),
-//                Bitmap.Config.ARGB_8888);
-//        Canvas canvas = new Canvas(bitmap);
-//        vectorDrawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
-//        vectorDrawable.draw(canvas);
-//        BitmapDescriptor bitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap);
-//
-//        for (LatLng point : points ) {
-//            MarkerOptions markerOptions = new MarkerOptions()
-//                    .position(point)
-//                    .icon(bitmapDescriptor); // Set dot color as desired
-//            listOfMarkers.add(recording_map.addMarker(markerOptions.anchor(0.5f, 0.5f)););
-//        }
+        else {
+            // create a new marker at the last element position
+            MarkerOptions markerOptions = new MarkerOptions()
+                    .position(points.get(points.size() - 1))
+                    .icon(convertVectorToBitmap(this.getContext(), dotColor, R.drawable.radio_button_checked_24px));
+            listOfMarkers.add(recording_map.addMarker(markerOptions.anchor(0.5f, 0.5f)));
+        }
+
     }
 
     /**
