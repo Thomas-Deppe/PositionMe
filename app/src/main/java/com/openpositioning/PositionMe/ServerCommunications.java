@@ -8,6 +8,7 @@ import android.net.NetworkInfo;
 import androidx.preference.PreferenceManager;
 
 import com.openpositioning.PositionMe.fragments.FilesFragment;
+import com.openpositioning.PositionMe.fragments.StartLocationFragment;
 import com.openpositioning.PositionMe.sensors.Observable;
 import com.openpositioning.PositionMe.sensors.Observer;
 import com.google.protobuf.util.JsonFormat;
@@ -537,6 +538,11 @@ public class ServerCommunications implements Observable {
         this.observers.add(o);
     }
 
+    @Override
+    public void unRegisterObserver(Observer o) {
+        this.observers.remove(o);
+    }
+
     /**
      * {@inheritDoc}
      *
@@ -554,7 +560,7 @@ public class ServerCommunications implements Observable {
             else if (index == 1 && o instanceof MainActivity) {
                 o.updateServer(new Boolean[] {success});
             }
-            else if (index == 2 && o instanceof SensorFusion) {
+            else if (index == 2 && (o instanceof SensorFusion || o instanceof StartLocationFragment)) {
                 o.updateServer(new Object[] {wifiresponse});
             }
         }
