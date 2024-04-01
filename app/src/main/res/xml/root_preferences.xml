@@ -41,6 +41,20 @@
             app:summaryOn="@string/manual_steps_summary_on"
             app:defaultValue="false"/>
 
+        <SwitchPreferenceCompat
+            app:key="kalman_fusion_enable"
+            app:title="@string/kalman_fusion_title"
+            app:summaryOff="@string/kalman_fusion_off"
+            app:summaryOn="@string/kalman_fusion_on"
+            app:defaultValue="true"/>
+
+        <SwitchPreferenceCompat
+            app:key="particle_fusion_enable"
+            app:title="@string/particle_fusion_title"
+            app:summaryOff="@string/particle_fusion_off"
+            app:summaryOn="@string/particle_fusion_on"
+            app:defaultValue="false"/>
+
         <SeekBarPreference
             app:key="user_step_length"
             app:title="@string/step_title"
