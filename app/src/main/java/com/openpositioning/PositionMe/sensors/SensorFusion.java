@@ -1195,15 +1195,16 @@ public class SensorFusion implements SensorEventListener, Observer {
     }
 
 
-    public void initialiseFusionAlgorithm(double initialLat, double initialLong, double initialAlt){
-        this.particleFilter = new ParticleFilter(initialLat, initialLong, initialAlt);
-        this.extendedKalmanFilter = new ExtendedKalmanFilter();
+    public void initialiseFusionAlgorithm(double initialLat, double initialLong, double initialAlt) {
+        if (enableKalmanFilter) {
+            this.extendedKalmanFilter = new ExtendedKalmanFilter();
+        }
+        if (enableParticleFilter) {
+            this.particleFilter = new ParticleFilter(initialLat, initialLong, initialAlt);
+        }
     }
 
     public void setEnableFusionAlgorithms(){
-        // Initialise settings
-//        this.settings = PreferenceManager.getDefaultSharedPreferences(context);
-
         // Check what fusion algorithm is set to be used
         enableKalmanFilter = this.settings.getBoolean("kalman_fusion_enable", true);
         System.out.println("kalman enable: "+ enableKalmanFilter);

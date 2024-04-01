@@ -611,7 +611,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
      */
     @Override
     public void onParticleUpdate(LatLng particleAlgPosition){
-        // todo: display new point on the map -- fusion trajectory
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -619,7 +618,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     updateParticleTrajectory(particleAlgPosition);
                     displayPolylineAsDots(trajectory_particle.getPoints(), Color.YELLOW, particleMarker);
 
-                    // todo
                     if (!sensorFusion.getEnableFusionAlgorithms()){
                         currFusionPosition = particleAlgPosition;
                     }
@@ -632,18 +630,18 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                         // get current GNSS reading and compare it
                         float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
                         Location.distanceBetween(GNSS_pos[0], GNSS_pos[1], particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
-                        poserrorGNSS[1] = distanceBetween[0];
+                        poserrorGNSS[0] = distanceBetween[0];
 
                         // get current PDR and compare it
                         Location.distanceBetween(currentPosition.latitude, currentPosition.longitude, particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
-                        poserrorPDR[1] = distanceBetween[0];
+                        poserrorPDR[0] = distanceBetween[0];
 
                         // get current wifi server position and compare it
                         if (wifiPosition == null) {
-                            poserrorWifi[1] = 0;
+                            poserrorWifi[0] = 0;
                         } else {
                             Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
-                            poserrorWifi[1] = distanceBetween[0];
+                            poserrorWifi[0] = distanceBetween[0];
                         }
                         // update the UI
                         updatePositionError();
@@ -662,7 +660,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
      */
     @Override
     public void onKalmanUpdate(LatLng kalmanAlgPosition){
-        // todo: display new point on the map -- fusion trajectory
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -692,8 +689,12 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     poserrorPDR[0] = distanceBetween[0];
 
                     // get current wifi server position and compare it
-                    Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
-                    poserrorWifi[0] = distanceBetween[0];
+                    if (wifiPosition == null) {
+                        poserrorWifi[0] = 0;
+                    } else {
+                        Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
+                        poserrorWifi[0] = distanceBetween[0];
+                    }
 
                     // update the UI
                     updatePositionError();
@@ -703,9 +704,9 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     }
 
     private void updatePositionError(){
-        errorWifi.setText(getString(R.string.meter, String.format("%.2fm \t \t %.2fm", poserrorPDR[0], poserrorPDR[1])));
-        errorGNSS.setText(getString(R.string.meter, String.format("%.2fm \t \t %.2fm", poserrorGNSS[0], poserrorGNSS[1])));
-        errorPDR.setText(getString(R.string.meter, String.format("%.2fm  \t \t %.2fm",  poserrorPDR[0], poserrorPDR[1])));
+        errorWifi.setText(getString(R.string.meter, String.format("%.2fm", poserrorPDR[0])));
+        errorGNSS.setText(getString(R.string.meter, String.format("%.2fm", poserrorGNSS[0])));
+        errorPDR.setText(getString(R.string.meter, String.format("%.2fm",  poserrorPDR[0])));
 
     }
 
