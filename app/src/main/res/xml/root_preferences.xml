@@ -51,8 +51,8 @@
         <SwitchPreferenceCompat
             app:key="particle_fusion_enable"
             app:title="@string/particle_fusion_title"
-            app:summaryOn="@string/particle_fusion_off"
-            app:summaryOff="@string/particle_fusion_on"
+            app:summaryOff="@string/particle_fusion_off"
+            app:summaryOn="@string/particle_fusion_on"
             app:defaultValue="false"/>
 
         <SeekBarPreference
