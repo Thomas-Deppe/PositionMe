@@ -138,7 +138,7 @@ public class SensorFusion implements SensorEventListener, Observer {
     private float[] startLocation;
     private double[] startRef;
 
-    private boolean enableKalmanFilter, enableParticleFilter;
+    private boolean enableKalmanFilter = true, enableParticleFilter = false;
     private double[] ecefRefCoords;
 
     // Wifi values
@@ -1110,13 +1110,12 @@ public class SensorFusion implements SensorEventListener, Observer {
 
             // todo: error checking - in case the latlng are 0,0
             // call fusion algorithm
-            if (enableKalmanFilter) {
+            if (enableParticleFilter) {
                 particleFilter.update(latitude, longitude);
             }
-            if (enableParticleFilter){
+            if (enableKalmanFilter){
                 this.extendedKalmanFilter.onOpportunisticUpdate(
-                        CoordinateTransform.geodeticToEnu(latitude, longitude, getElevation(), startRef[0], startRef[1], startRef[2]),
-                        (android.os.SystemClock.uptimeMillis() - bootTime)
+                        CoordinateTransform.geodeticToEnu(latitude, longitude, getElevation(), startRef[0], startRef[1], startRef[2]),(android.os.SystemClock.uptimeMillis() - bootTime)
                 );
             }
 
