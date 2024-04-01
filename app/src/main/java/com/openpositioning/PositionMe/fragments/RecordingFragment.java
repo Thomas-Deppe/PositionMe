@@ -151,10 +151,13 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     //Used to manipulate the floor plans displayed and track which building the user is in.
     private BuildingManager buildingManager;
     //The coordinates of the users current position
-    private LatLng currentPosition, wifiPosition;
+    private LatLng currentPosition, wifiPosition, currFusionPosition;
+
     //Stores the markers displaying the users location and GNSS position so they can be manipulated without removing and re-adding them
     private Marker GNSS_marker;
     private Marker user_marker;
+    private Marker fusion_marker;
+
     //The users current floor. The user is expected to start on the ground floor.
     private int currentFloor = 0;
 
@@ -429,7 +432,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
              */
             @Override
             public void onClick(View view) {
-                tagPositionToFilters();
+                sensorFusion.addFusionTagTraj(currFusionPosition);
             }
         });
 
@@ -614,29 +617,35 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     updateParticleTrajectory(particleAlgPosition);
                     displayPolylineAsDots(trajectory_particle.getPoints(), Color.YELLOW, particleMarker);
 
-                    // now update the positional errors of pdr, wifi, gnss
-                    // setting the positional errors --> 1st groundtruth Kalman, 2nd ground truth Particle
-                    float[] distanceBetween = new float[1];
-
-                    // get current GNSS reading and compare it
-                    float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
-                    Location.distanceBetween(GNSS_pos[0], GNSS_pos[1], particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
-                    poserrorGNSS[1] = distanceBetween[0];
-
-                    // get current PDR and compare it
-                    Location.distanceBetween(currentPosition.latitude, currentPosition.longitude, particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
-                    poserrorPDR[1] = distanceBetween[0];
-
-                    // get current wifi server position and compare it
-                    if (wifiPosition == null){
-                        poserrorWifi[1] = 0;
+                    // todo
+                    if (!sensorFusion.getEnableFusionAlgorithms()){
+                        currFusionPosition = particleAlgPosition;
                     }
-                    else {
-                        Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
-                        poserrorWifi[1] = distanceBetween[0];
+
+                    if (showGNSS != null && showGNSS.isChecked()) {
+                        // now update the positional errors of pdr, wifi, gnss
+                        // setting the positional errors --> 1st groundtruth Kalman, 2nd ground truth Particle
+                        float[] distanceBetween = new float[1];
+
+                        // get current GNSS reading and compare it
+                        float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
+                        Location.distanceBetween(GNSS_pos[0], GNSS_pos[1], particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
+                        poserrorGNSS[1] = distanceBetween[0];
+
+                        // get current PDR and compare it
+                        Location.distanceBetween(currentPosition.latitude, currentPosition.longitude, particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
+                        poserrorPDR[1] = distanceBetween[0];
+
+                        // get current wifi server position and compare it
+                        if (wifiPosition == null) {
+                            poserrorWifi[1] = 0;
+                        } else {
+                            Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
+                            poserrorWifi[1] = distanceBetween[0];
+                        }
+                        // update the UI
+                        updatePositionError();
                     }
-                    // update the UI
-                    updatePositionError();
                 }
             }
         });
@@ -659,25 +668,34 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 updateKalmanTrajectory(kalmanAlgPosition);
                 displayPolylineAsDots(trajectory_kalman.getPoints(), Color.CYAN, kalmanMarker);
 
-                // now update the positional errors of pdr, wifi, gnss
-                // setting the positional errors --> 1st groundtruth Kalman, 2nd ground truth Particle
-                float[] distanceBetween = new float[1];
 
-                // get current GNSS reading and compare it
-                float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
-                Location.distanceBetween(GNSS_pos[0], GNSS_pos[1], kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
-                poserrorGNSS[0] = distanceBetween[0];
+                // if kalman filter is selected to run
+                if (sensorFusion.getEnableFusionAlgorithms()){
+                    currFusionPosition = kalmanAlgPosition;
+                }
+                else{return;}
 
-                // get current PDR and compare it
-                Location.distanceBetween(currentPosition.latitude, currentPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
-                poserrorPDR[0] = distanceBetween[0];
+                if (showGNSS != null && showGNSS.isChecked()){
+                    // now update the positional errors of pdr, wifi, gnss
+                    // setting the positional errors --> 1st groundtruth Kalman, 2nd ground truth Particle
+                    float[] distanceBetween = new float[1];
 
-                // get current wifi server position and compare it
-                Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
-                poserrorWifi[0] = distanceBetween[0];
+                    // get current GNSS reading and compare it
+                    float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
+                    Location.distanceBetween(GNSS_pos[0], GNSS_pos[1], kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
+                    poserrorGNSS[0] = distanceBetween[0];
 
-                // update the UI
-                updatePositionError();
+                    // get current PDR and compare it
+                    Location.distanceBetween(currentPosition.latitude, currentPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
+                    poserrorPDR[0] = distanceBetween[0];
+
+                    // get current wifi server position and compare it
+                    Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
+                    poserrorWifi[0] = distanceBetween[0];
+
+                    // update the UI
+                    updatePositionError();
+                }
             }
         });
     }
@@ -1317,16 +1335,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
         AlertDialog customAlertDialog = alertDialog.create();
         customAlertDialog.show();
-    }
-
-    /**
-     * Defines an Alert Dialog Object for change of the Map Type
-     * Redirects to changeMapType() method to update the Map Object
-     * @var currentMapType - int
-     */
-    public void tagPositionToFilters(){
-        // TODO: calls one of the update functions in Sensor Fusion
-//        sensorFusion.updateTag(currentPosition);
     }
 
 }
