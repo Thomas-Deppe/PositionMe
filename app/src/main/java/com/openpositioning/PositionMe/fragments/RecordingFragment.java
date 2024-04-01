@@ -251,6 +251,8 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             trajectory_kalman.setZIndex(1);
             trajectory_particle.setZIndex(1);
 
+            // Dont show points for polyline
+
             // initialise filters
             sensorFusion.initialiseFusionAlgorithm(startPosition[0], startPosition[1], sensorFusion.getElevation());
             System.out.println("starting logation"+startPosition);
@@ -824,6 +826,31 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             points.add(point);
             trajectory_kalman.setPoints(points);
         }
+    }
+
+    // Simple smoothing for trajectory, returns a list of interpolated points between two points
+    private List<LatLng> interpolate_points(LatLng lastPoint, LatLng newPoint, int numPoints) {
+        List<LatLng> interpolatedPoints = new ArrayList<>();
+
+        double latDiff = newPoint.latitude - lastPoint.latitude;
+        double lngDiff = newPoint.longitude - lastPoint.longitude;
+
+        // Calculate step size for interpolation
+        double stepLat = latDiff / (numPoints + 1);
+        double stepLng = lngDiff / (numPoints + 1);
+
+        // Start interpolation from the point following last_point
+        double currentLat = lastPoint.latitude + stepLat;
+        double currentLng = lastPoint.longitude + stepLng;
+
+        // Generate intermediate points
+        for (int i = 0; i < numPoints; i++) {
+            interpolatedPoints.add(new LatLng(currentLat, currentLng));
+            currentLat += stepLat;
+            currentLng += stepLng;
+        }
+
+        return interpolatedPoints;
     }
 
     private void displayPolylineAsDots(List<LatLng> points, int dotColor, List<Marker> listOfMarkers) {
