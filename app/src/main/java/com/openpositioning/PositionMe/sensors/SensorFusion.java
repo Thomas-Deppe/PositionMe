@@ -253,6 +253,9 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.pdrProcessing = new PdrProcessing(context);
         //Settings
         this.settings = PreferenceManager.getDefaultSharedPreferences(context);
+        // Picks the Fusion Algorithm to run
+        System.out.println("setting enable for filters");
+        setEnableFusionAlgorithms();
 
         this.pathView = new PathView(context, null);
 
@@ -266,8 +269,6 @@ public class SensorFusion implements SensorEventListener, Observer {
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
                 "MyApp::MyWakelockTag");
 
-        // Picks the Fusion Algorithm to run
-        setEnableFusionAlgorithms();
     }
     //endregion
 
