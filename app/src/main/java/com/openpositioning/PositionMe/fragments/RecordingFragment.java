@@ -208,7 +208,8 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
             // Add a marker in current GPS location and move the camera
             startPosition = sensorFusion.getGNSSLatLngAlt(true);
-            ecefRefCoords = CoordinateTransform.geodeticToEcef(startPosition[0],startPosition[1], startPosition[2]);
+            ecefRefCoords = sensorFusion.getEcefRefCoords();
+            //ecefRefCoords = CoordinateTransform.geodeticToEcef(startPosition[0],startPosition[1], startPosition[2]);
             LatLng position = new LatLng(startPosition[0], startPosition[1]);
 
             //LatLng position = new LatLng(55.922431222785264, -3.1724382435880134);
@@ -228,7 +229,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             trajectory_particle = recording_map.addPolyline(new PolylineOptions().add(position));
             trajectory_kalman = recording_map.addPolyline(new PolylineOptions().add(position));
 
-            // setting different colur of the polylines
+            // setting different colour of the polylines
             user_trajectory.setColor(Color.BLUE);
             trajectory_wifi.setColor(Color.GREEN);
             trajectory_gnss.setColor(Color.RED);
@@ -673,9 +674,13 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 poserrorPDR[0] = distanceBetween[0];
 
                 // get current wifi server position and compare it
-                Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
-                poserrorWifi[0] = distanceBetween[0];
-
+                if (wifiPosition == null){
+                    poserrorWifi[1] = 0;
+                }
+                else {
+                    Location.distanceBetween(wifiPosition.latitude, wifiPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
+                    poserrorWifi[0] = distanceBetween[0];
+                }
                 // update the UI
                 updatePositionError();
             }
@@ -1200,7 +1205,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         this.errorPDR = recordingSettingsDialog.findViewById(R.id.errorParticlepdr);
         this.errorWifi = recordingSettingsDialog.findViewById(R.id.errorParticlewifi);
         this.errorGNSS = recordingSettingsDialog.findViewById(R.id.errParticlegnss);
-
 
         // turn on button to display the POSITION ERRORS
         this.showGNSS = recordingSettingsDialog.findViewById(R.id.toggleGNSS);
