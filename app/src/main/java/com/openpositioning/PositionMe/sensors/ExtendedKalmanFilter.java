@@ -5,6 +5,7 @@ import android.os.HandlerThread;
 import android.util.Log;
 
 import com.openpositioning.PositionMe.CoordinateTransform;
+import com.openpositioning.PositionMe.OutlierDetector;
 
 import org.ejml.simple.SimpleMatrix;
 
@@ -40,8 +41,11 @@ public class ExtendedKalmanFilter {
 
     private HandlerThread ekfThread;
     private Handler ekfHandler;
+    private OutlierDetector outlierDetector;
 
     public ExtendedKalmanFilter() {
+
+        this.outlierDetector = new OutlierDetector();
 
         this.isFirstPrediction = true;
 
@@ -102,19 +106,21 @@ public class ExtendedKalmanFilter {
         });
     }
 
-    private void updateQk (double averageStepLength, double theta_k, double penaltyFactor){
+    private void updateQk (double averageStepLength, double theta_k, long refTime){
+        double penaltyFactor = calculateTimePenalty(refTime);
         Log.d("EKF:", "update Qk... average Step = "+averageStepLength+ " theta_k = "+theta_k + " Penalty = "+penaltyFactor);
         double step_error = (stepPercentageError * averageStepLength + stepMisdirection) * penaltyFactor;
         //float adaptedHeading = (float) (Math.PI/2 - theta_k);
         double adaptedHeading = theta_k;
         double north_error = step_error*Math.cos(adaptedHeading);
         double east_error = step_error*Math.sin(adaptedHeading);
+        double bearing_error = calculateBearingPenalty(refTime);
         Log.d("EKF:", "new error variances: step_error = "+step_error+ " north_error = "+north_error+" east_error = "+east_error);
 
         this.Qk.set(0, 0, north_error*north_error);
         this.Qk.set(1, 1, east_error*east_error);
         this.Qk.set(2, 2, step_error*step_error);
-        this.Qk.set(3, 3, sigma_dtheta*sigma_dtheta);
+        this.Qk.set(3, 3, bearing_error*bearing_error);
     }
 
     private void updateRk(double penaltyFactor){
@@ -151,7 +157,7 @@ public class ExtendedKalmanFilter {
                 //    initialiseStateVector(adaptedHeading);
                 //}
                 updateFk(adaptedHeading, step_k);
-                updateQk(averageStepLength, adaptedHeading, calculateTimePenalty(refTime));
+                //updateQk(averageStepLength, adaptedHeading, refTime);
 
                 // Predict the state vector Xk
                 Xk = Fk.mult(Xk);
@@ -169,7 +175,8 @@ public class ExtendedKalmanFilter {
             @Override
             public void run() {
                 SimpleMatrix Zk = new SimpleMatrix(new double[][]{{observation_k[0]}, {observation_k[1]}});
-                updateRk(penaltyFactor);
+                //updateRk(penaltyFactor);
+                updateRk();
 
                 SimpleMatrix y_pred = Zk.minus(Hk.mult(Xk));
                 SimpleMatrix Sk = Hk.mult(Pk).mult(Hk.transpose()).plus(Rk);
@@ -193,15 +200,23 @@ public class ExtendedKalmanFilter {
             public void run() {
                 Log.d("EKF:", "Opportunistic update...");
                 Log.d("EKF:", "East: "+observe[0]+ " North: "+ observe[1] + "Timestamp: " + refTime);
-                lastOpportunisticUpdate = observe;
-                lastOpUpdateTime = refTime;
+                double predictedEast= Xk.get(1, 0);
+                double predictedNorth = Xk.get(0,0);
+                double distanceBetween = Math.sqrt(Math.pow(predictedEast - observe[0], 2) + Math.pow(predictedNorth - observe[1], 2));
+
+                if (!outlierDetector.detectOutliers(distanceBetween)){
+                    Log.d("EKF", "No outlier detected");
+                    lastOpportunisticUpdate = observe;
+                    lastOpUpdateTime = refTime;
+                }
             }
         });
     }
 
     public void onStepDetected(double pdrEast, double pdrNorth, double altitude, double theta_k, double stepLength, long refTime){
 
-        if (checkRelevance(refTime) && lastOpportunisticUpdate != null){
+        if (lastOpportunisticUpdate != null && checkRelevance(refTime)){
+            Log.d("EKF:", "Using observation update");
             onObservationUpdate(lastOpportunisticUpdate[0], lastOpportunisticUpdate[1], pdrEast, pdrNorth, altitude, calculateTimePenalty(refTime));
             return;
         }
@@ -230,6 +245,15 @@ public class ExtendedKalmanFilter {
         double penaltyFactor = 1.0 + (elapsedTime / 1000.0); // Simple linear penalty
         Log.d("EKF:", "Penalty factor: "+penaltyFactor);
         return Math.max(penaltyFactor, 1); // Ensure the penalty factor never reduces measurement noise
+    }
+
+    // Calculates the penalty factor based on the elapsed time since the last WiFi update
+    private double calculateBearingPenalty(long elapsedTime) {
+        double elapsedTimeMinutes = elapsedTime / 60000.0;
+
+        // Linear or exponential penalty factor based on elapsed time
+        // Example: linear growth
+        return sigma_dtheta*elapsedTimeMinutes;// Adjust the divisor to control the rate of increase
     }
 
     public void onObservationUpdate(double observeEast, double observeNorth, double pdrEast, double pdrNorth, double altitude, double penaltyFactor){

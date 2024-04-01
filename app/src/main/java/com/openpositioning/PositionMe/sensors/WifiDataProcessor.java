@@ -284,6 +284,11 @@ public class WifiDataProcessor implements Observable {
         observers.add(o);
     }
 
+    @Override
+    public void unRegisterObserver(Observer o) {
+        observers.remove(o);
+    }
+
     /**
      * Implement default method from Observable Interface to add notify observers to the class.
      * Changes to the wifiData variable are passed to observers of the class.

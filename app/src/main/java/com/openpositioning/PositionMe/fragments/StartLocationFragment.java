@@ -1,6 +1,7 @@
 package com.openpositioning.PositionMe.fragments;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,7 +14,10 @@ import androidx.fragment.app.Fragment;
 import androidx.navigation.NavDirections;
 import androidx.navigation.Navigation;
 
+import com.openpositioning.PositionMe.JsonConverter;
 import com.openpositioning.PositionMe.R;
+import com.openpositioning.PositionMe.ServerCommunications;
+import com.openpositioning.PositionMe.sensors.Observer;
 import com.openpositioning.PositionMe.sensors.SensorFusion;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -22,6 +26,11 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.openpositioning.PositionMe.sensors.Wifi;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
 /**
  * A simple {@link Fragment} subclass. The startLocation fragment is displayed before the trajectory
  * recording starts. This fragment displays a map in which the user can adjust their location to
@@ -33,7 +42,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
  *
  * @author Virginia Cangelosi
  */
-public class StartLocationFragment extends Fragment {
+public class StartLocationFragment extends Fragment implements Observer{
 
     //Button to go to next fragment and save the location
     private Button button;
@@ -47,6 +56,8 @@ public class StartLocationFragment extends Fragment {
     private double[] startRef = new double[3];
     //Zoom of google maps
     private float zoom = 19f;
+
+    private ServerCommunications serverCommunications;
 
     /**
      * Public Constructor for the class.
@@ -66,6 +77,16 @@ public class StartLocationFragment extends Fragment {
         // Inflate the layout for this fragment
         ((AppCompatActivity)getActivity()).getSupportActionBar().hide();
         View rootView = inflater.inflate(R.layout.fragment_startlocation, container, false);
+
+        this.serverCommunications = ServerCommunications.getMainInstance();
+        this.serverCommunications.registerObserver(this);
+        try {
+            JSONObject jsonFingerprint = JsonConverter.toJson(sensorFusion.getWifiList());
+            Log.d("Start Position:", "Sending fingerprint to server "+ jsonFingerprint.toString());
+            this.serverCommunications.sendWifi(jsonFingerprint);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
 
         //Obtain the start position from the GPS data from the SensorFusion class
         startPosition = sensorFusion.getGNSSLatitude(false);
@@ -167,5 +188,34 @@ public class StartLocationFragment extends Fragment {
                 Navigation.findNavController(view).navigate(action);
             }
         });
+    }
+
+    @Override
+    public void updateServer(Object[] objList) {
+        if (objList == null) return;
+
+        JSONObject wifiResponse = (JSONObject) objList[0];
+        Log.d("Start Position:", "Server response "+wifiResponse.toString());
+
+        try {
+            double latitude = wifiResponse.getDouble("lat");
+            double longitude = wifiResponse.getDouble("lon");
+            double floor = wifiResponse.getDouble("floor");
+            startPosition[0] = (float) latitude;
+            startRef[0] = latitude;
+            startPosition[1] = (float) longitude;
+            startRef[1] = longitude;
+            startRef[2] = sensorFusion.getAbsoluteElevation();
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        this.serverCommunications.unRegisterObserver(this);
+    }
+
+    @Override
+    public void updateWifi(Object[] objList) {
+        return;
     }
 }
