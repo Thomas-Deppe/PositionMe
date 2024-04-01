@@ -1133,17 +1133,11 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 if (isChecked){
                     if (user_trajectory != null){
                         user_trajectory.setVisible(true);
-                        for (Marker marker : pdrMarker) {
-                            marker.setVisible(true);
-                        }
                     }
                 }
                 else{
                     if (user_trajectory != null){
                         user_trajectory.setVisible(false);
-                        for (Marker marker : pdrMarker) {
-                            marker.setVisible(false);
-                        }
                     }
                 }
             }
@@ -1181,17 +1175,17 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 if (isChecked){
                     if (trajectory_gnss != null){
                         trajectory_gnss.setVisible(true);
-                        for (Marker marker : gnssmarker) {
-                            marker.setVisible(true);
-                        }
+//                        for (Marker marker : gnssmarker) {
+//                            marker.setVisible(true);
+//                        }
                     }
                 }
                 else{
                     if (trajectory_gnss != null){
                         trajectory_gnss.setVisible(false);
-                        for (Marker marker : gnssmarker) {
-                            marker.setVisible(false);
-                        }
+//                        for (Marker marker : gnssmarker) {
+//                            marker.setVisible(false);
+//                        }
                     }
                 }
             }
@@ -1205,17 +1199,11 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 if (isChecked){
                     if (trajectory_kalman != null){
                         trajectory_kalman.setVisible(true);
-                        for (Marker marker : kalmanMarker) {
-                            marker.setVisible(true);
-                        }
                     }
                 }
                 else{
                     if (trajectory_kalman != null){
                         trajectory_kalman.setVisible(false);
-                        for (Marker marker : kalmanMarker) {
-                            marker.setVisible(false);
-                        }
                     }
                 }
             }
@@ -1229,17 +1217,11 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 if (isChecked){
                     if (trajectory_particle != null){
                         trajectory_particle.setVisible(true);
-                        for (Marker marker : particleMarker) {
-                            marker.setVisible(true);
-                        }
                     }
                 }
                 else{
                     if (trajectory_particle != null){
                         trajectory_particle.setVisible(false);
-                        for (Marker marker : particleMarker) {
-                            marker.setVisible(false);
-                        }
                     }
                 }
             }
