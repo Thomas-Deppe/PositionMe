@@ -9,23 +9,24 @@ import com.openpositioning.PositionMe.OutlierDetector;
 
 import org.ejml.simple.SimpleMatrix;
 
+
 public class ExtendedKalmanFilter {
 
-    private static final long relevanceThreshold = 5000;
-    private static final double stepPercentageError = 0.1;
-    private static final double stepMisdirection = 0.05;
-    private static final double defaultStepLength = 0.7;
+    private static long relevanceThreshold = 5000;
+    private static double stepPercentageError = 0.1;
+    private static double stepMisdirection = 0.05;
+    private static double defaultStepLength = 0.7;
 
     // Example standard deviations for process and measurement noise
-    private final double sigma_dN = 2; // Variance for dx process noise
-    private final double sigma_dE = 2; // Variance for dy process noise
-    private final double sigma_ds = 1; // variance for ds process noise
-    private final double sigma_dtheta = Math.toRadians(15); // Standard deviation for dθ process noise in radians
+    private double sigma_dN = 2; // Variance for dx process noise
+    private double sigma_dE = 2; // Variance for dy process noise
+    private double sigma_ds = 1; // variance for ds process noise
+    private double sigma_dtheta = Math.toRadians(15); // Standard deviation for dθ process noise in radians
 
-    private final double sigma_north_meas = 10; // Standard deviation for x measurement noise PDR
-    private final double sigma_east_meas = 10; // Standard deviation for y measurement noise PDR
-    private final double wifi_std = 10;
-    private final double gnss_std = 5;
+    private double sigma_north_meas = 10; // Standard deviation for x measurement noise PDR
+    private double sigma_east_meas = 10; // Standard deviation for y measurement noise PDR
+    private double wifi_std = 10;
+    private double gnss_std = 5;
 
     private SimpleMatrix Fk; // State transition matrix
     private SimpleMatrix Qk; // Process noise covariance matrix
@@ -36,7 +37,7 @@ public class ExtendedKalmanFilter {
 
     private double[] lastOpportunisticUpdate;
     private long lastOpUpdateTime;
-    private final boolean usingWifi = true;
+    private boolean usingWifi = true;
     private boolean isFirstPrediction;
     private double prevStepLength;
     private double prevTheta;
@@ -150,13 +151,13 @@ public class ExtendedKalmanFilter {
         }
     }
 
-    private void updateRk(){
+    private void updateRk (){
         if (this.usingWifi){
-            this.Rk.set(0,0, (wifi_std*wifi_std));
-            this.Rk.set(1, 1, (wifi_std*wifi_std));
+            this.Rk.set(0,0, wifi_std*wifi_std);
+            this.Rk.set(1, 1, wifi_std*wifi_std);
         } else {
-            this.Rk.set(0,0, (gnss_std*gnss_std));
-            this.Rk.set(1, 1, (gnss_std*gnss_std));
+            this.Rk.set(0,0, gnss_std*gnss_std);
+            this.Rk.set(1, 1, gnss_std*gnss_std);
         }
     }
 
@@ -266,7 +267,7 @@ public class ExtendedKalmanFilter {
 
     public void onStepDetected(double pdrEast, double pdrNorth, double altitude, double theta_k, double stepLength, long refTime){
         Log.d("EKF", "======== ON STEP DETECTED ========");
-
+      
         if (lastOpportunisticUpdate != null && checkRelevance(refTime)){
             Log.d("EKF:", "Using observation update");
             double distanceBetween = Math.sqrt(Math.pow(lastOpportunisticUpdate[0]-pdrEast, 2) + Math.pow(lastOpportunisticUpdate[1] - pdrNorth, 2));
@@ -337,6 +338,7 @@ public class ExtendedKalmanFilter {
                 update(observation, theta_k, penaltyFactor);
                 Log.d("EKF", "XK after update: "+Xk.toString());
                 Log.d("EKF", "OUTPUT: East = "+Xk.get(1, 0) + " North = "+Xk.get(2,0));
+
                 double[] startPosition = SensorFusion.getInstance().getGNSSLatLngAlt(true);
                 double[] ecefRefCoords = SensorFusion.getInstance().getEcefRefCoords();
                 SensorFusion.getInstance().notifyKalmanFilterUpdate(
@@ -361,8 +363,7 @@ public class ExtendedKalmanFilter {
                 double predictedNorth = Xk.get(2,0);
                 Log.d("EKF:", "Predicted ... East = "+predictedEast+" North = "+predictedNorth);
                 Log.d("EKF:", "Observation... East = "+(predictedEast - pdrEast)+" North = "+(predictedNorth - pdrNorth));
-
-
+              
                 double[] observation = new double[] {(predictedEast - pdrEast), (predictedNorth - pdrNorth)};
                 update(observation, theta_k, penaltyFactor);
                 Log.d("EKF:", "Recursive correction output... East = "+Xk.get(1, 0)+" North = "+Xk.get(2,0));
@@ -387,6 +388,7 @@ public class ExtendedKalmanFilter {
         }
         return x;
     }
+
 
     public void stopFusion(){
         Log.d("EKF:", "Stopping EKF handler");

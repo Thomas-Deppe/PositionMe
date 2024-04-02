@@ -86,7 +86,7 @@
     <string name="error_pdr">PDR error:\t \t</string>
     <string name="error_wifi">Wifi error:\t \t</string>
     <string name="error_gnss">GNSS error:</string>
-    <string name="error_title">\t Kalman Filter \t \t Particle Filter</string>
+    <string name="error_title">\t \t Fusion Algorithm (Ground Truth) </string>
 
 
     <!-- Units only -->
@@ -108,6 +108,17 @@
     <string name="manual_steps_summary_on">The app will use the values provided below</string>
     <string name="height_title">User height (cm)</string>
     <string name="step_title">Step length (cm)</string>
+    <string name="kalman_fusion_title">Use the Kalman Filter Fusion</string>
+    <string name="kalman_fusion_on">The app will use Kalman filter as a fusion algorithm</string>
+    <string name="kalman_fusion_off">The app will not use Kalman filter as a fusion algorithm</string>
+
+    <string name="fusion_title">Use the Kalman or Particle Fusion</string>
+    <string name="fusion_on">The app will use Kalman filter as a fusion algorithm</string>
+    <string name="fusion_off">The app will use Particle filter as a fusion algorithm</string>
+
+    <string name="particle_fusion_title">Use the Particle Filter Fusion</string>
+    <string name="particle_fusion_off">The app will use the particle filter as a fusion algorithm</string>
+    <string name="particle_fusion_on">The app will not use the particle filter as a fusion algorithm</string>
     <!-- Constants Preferences -->
     <string name="constants_enable_title">Edit the constants used</string>
     <string name="constants_summary_off">The app will use the default constants</string>
