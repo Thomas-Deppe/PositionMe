@@ -27,8 +27,12 @@ public class ParticleFilter {
     private final double initialTrueEasting;
     private final double initialTrueNorthing;
 
+    // Outlier Detector
+    private OutlierDetector outlierDetector;
+
     // Class constructor, creates a particle filter based off the initial starting location parameters
     public ParticleFilter(double startLat, double startLong, double startAlt) {
+        this.outlierDetector = new OutlierDetector();
         this.refLatitude = startLat;
         this.refLongitude = startLong;
         this.refAlt = startAlt;
@@ -110,8 +114,8 @@ public class ParticleFilter {
     public void update(double measuredLat, double measuredLong) {
         float[] distanceBetween = new float[1];
         Location.distanceBetween(measuredLat, measuredLong, refLatitude, refLongitude, distanceBetween);
-        if (distanceBetween[0] < 1) {
-            Log.d("PARTICLE_FILTER", "New LatLang distance too small: " + distanceBetween[0]);
+        if (outlierDetector.detectOutliers(distanceBetween[0])) {
+            Log.d("PARTICLE_FILTER", "Outlier Detected: " + distanceBetween[0]);
             return;
         }
 
