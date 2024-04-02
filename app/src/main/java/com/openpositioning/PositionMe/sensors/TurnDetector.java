@@ -3,8 +3,8 @@ package com.openpositioning.PositionMe.sensors;
 import android.util.Log;
 
 public class TurnDetector {
-    private static final float TURN_THRESHOLD = 0.78539f;
-    private static final float PSEUDO_TURN = 0.349066f;
+    private static final float TURN_THRESHOLD = 1.6f;
+    private static final float PSEUDO_TURN = 0.8f;
     private float orientationPrev;
     private boolean startMonitoring;
     private MovementType userMovement;
@@ -50,21 +50,26 @@ public class TurnDetector {
     public void ProcessOrientationData(float orientationUpdate){
         if (!this.startMonitoring) return;
 
-        double azimuthChange = wraptopi(Math.abs(orientationUpdate - orientationPrev));
-        Log.d("TURN_DETECTOR", "Analysing azimuth change: " + Math.toDegrees(azimuthChange));
+        float azimuthInDegrees = (float) (Math.toDegrees(orientationUpdate) + 360) % 360;
+        float azimuthChange = Math.abs(azimuthInDegrees - orientationPrev);
+        //double azimuthChange = wraptopi(Math.abs(orientationUpdate - orientationPrev));
+        if (azimuthChange > 180) {
+            azimuthChange = 360 - azimuthChange;
+        }
+        Log.d("TURN_DETECTOR", "Analysing azimuth change: " + azimuthChange);
 
         if (azimuthChange > TURN_THRESHOLD){
-            Log.d("TURN_DETECTOR", "Turn Detected with azimuth change: " + azimuthChange);
+            Log.d("TURN_DETECTOR", "Motion: TURN " + azimuthChange);
             userMovement.compareAndUpdate(MovementType.TURN);
         } else if (azimuthChange > PSEUDO_TURN){
-            Log.d("TURN_DETECTOR", "Pseudo turn Detected with azimuth change: " + azimuthChange);
+            Log.d("TURN_DETECTOR", "Motion: PSEUDO " + azimuthChange);
             userMovement.compareAndUpdate(MovementType.PSEUDO_TURN);
         } else {
-            Log.d("TURN_DETECTOR", "Straight with change: "+azimuthChange);
+            Log.d("TURN_DETECTOR", "Motion: STRAIGHT" + azimuthChange);
             userMovement.compareAndUpdate(MovementType.STRAIGHT);
         }
 
-        orientationPrev = orientationUpdate;
+        orientationPrev = azimuthInDegrees;
     }
 
     public MovementType onStepDetected(float orientation){
@@ -73,15 +78,6 @@ public class TurnDetector {
         this.userMovement = MovementType.STRAIGHT;
 
         return resultForStep;
-    }
-
-    private static double wraptopi(double x) {
-        if (x > Math.PI) {
-            x = x - (Math.floor(x / (2 * Math.PI)) + 1) * 2 * Math.PI;
-        } else if (x < -Math.PI) {
-            x = x + (Math.floor(x / (-2 * Math.PI)) + 1) * 2 * Math.PI;
-        }
-        return x;
     }
 
     public void startMonitoring(){

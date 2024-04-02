@@ -364,13 +364,15 @@ public class SensorFusion implements SensorEventListener, Observer {
                 long stepTime = android.os.SystemClock.uptimeMillis() - bootTime;
                 float[] newCords = this.pdrProcessing.updatePdr(stepTime, this.accelMagnitude, this.orientation[0]);
                 float step_length = this.pdrProcessing.getStepLength();
-                //update fusion processing algorithm with new PDR
-                this.extendedKalmanFilter.predict(this.orientation[0], step_length, passAverageStepLength(), (android.os.SystemClock.uptimeMillis() - bootTime));
-                this.updateFusionPDR();
 
                 // PDR to display
                 notifySensorUpdate(SensorFusionUpdates.update_type.PDR_UPDATE);
                 if (saveRecording) {
+                    //update fusion processing algorithm with new PDR
+                    this.extendedKalmanFilter.predict(this.orientation[0], step_length, passAverageStepLength(),
+                            (android.os.SystemClock.uptimeMillis() - bootTime),
+                            this.turnDetector.onStepDetected(this.orientation[0]));
+                    this.updateFusionPDR();
                     // Store the PDR coordinates for plotting the trajectory
                     this.pathView.drawTrajectory(newCords);
                 }
