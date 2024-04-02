@@ -156,6 +156,7 @@ public class SensorFusion implements SensorEventListener, Observer {
 
     private ParticleFilter particleFilter;
     private ExtendedKalmanFilter extendedKalmanFilter;
+    private TurnDetector turnDetector;
 
     //Creates a list of classes which wish to receive asynchronous updates from this class.
     private List<SensorFusionUpdates> recordingUpdates;
@@ -196,6 +197,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.startRef = new double[3];
 
         this.recordingUpdates = new ArrayList<>();
+        this.turnDetector = new TurnDetector();
     }
 
 
@@ -354,7 +356,7 @@ public class SensorFusion implements SensorEventListener, Observer {
                 SensorManager.getRotationMatrixFromVector(rotationVectorDCM,this.rotation);
                 SensorManager.getOrientation(rotationVectorDCM, this.orientation);
                 notifySensorUpdate(SensorFusionUpdates.update_type.ORIENTATION_UPDATE);
-                //this.turnDetector.ProcessOrientationData(this.orientation[0]);
+                this.turnDetector.ProcessOrientationData(this.orientation[0]);
                 break;
 
             case Sensor.TYPE_STEP_DETECTOR:
@@ -363,7 +365,7 @@ public class SensorFusion implements SensorEventListener, Observer {
                 float[] newCords = this.pdrProcessing.updatePdr(stepTime, this.accelMagnitude, this.orientation[0]);
                 float step_length = this.pdrProcessing.getStepLength();
                 //update fusion processing algorithm with new PDR
-                this.extendedKalmanFilter.predict(this.orientation[0], step_length, passAverageStepLength());
+                this.extendedKalmanFilter.predict(this.orientation[0], step_length, passAverageStepLength(), (android.os.SystemClock.uptimeMillis() - bootTime));
                 this.updateFusionPDR();
 
                 // PDR to display
@@ -625,6 +627,7 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void setStartGNSSLatLngAlt(double[] startPosition){
         this.startRef = startPosition;
         this.ecefRefCoords = CoordinateTransform.geodeticToEcef(startPosition[0],startPosition[1], startPosition[2]);
+        System.out.println("OUT START LOCATION "+startPosition[0]+" "+startPosition[1]+ " "+startPosition[2]);
     }
 
     public float getAbsoluteElevation(){
@@ -911,6 +914,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.stepCounter = 0;
         this.absoluteStartTime = System.currentTimeMillis();
         this.bootTime = android.os.SystemClock.uptimeMillis();
+        this.turnDetector.startMonitoring();
         // Protobuf trajectory class for sending sensor data to restful API
         this.trajectory = Traj.Trajectory.newBuilder()
                 .setAndroidVersion(Build.VERSION.RELEASE)
@@ -945,6 +949,10 @@ public class SensorFusion implements SensorEventListener, Observer {
         //setCurrentFloor(0);
         if(this.saveRecording) {
             this.saveRecording = false;
+            this.turnDetector.stopMonitoring();
+            if (this.extendedKalmanFilter != null){
+                this.extendedKalmanFilter.stopFusion();
+            }
             storeTrajectoryTimer.cancel();
         }
         if(wakeLock.isHeld()) {

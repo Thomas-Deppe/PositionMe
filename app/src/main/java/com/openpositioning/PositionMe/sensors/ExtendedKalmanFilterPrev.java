@@ -174,27 +174,22 @@ public class ExtendedKalmanFilterPrev {
     }
 
     public void update(double[] observation_k, double penaltyFactor){
-        ekfHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                SimpleMatrix Zk = new SimpleMatrix(new double[][]{{observation_k[0]}, {observation_k[1]}});
-                //updateRk(penaltyFactor);
-                updateRk();
+        SimpleMatrix Zk = new SimpleMatrix(new double[][]{{observation_k[0]}, {observation_k[1]}});
+        //updateRk(penaltyFactor);
+        updateRk();
 
-                SimpleMatrix y_pred = Zk.minus(Hk.mult(Xk));
-                SimpleMatrix Sk = Hk.mult(Pk).mult(Hk.transpose()).plus(Rk);
-                SimpleMatrix KalmanGain = Pk.mult(Hk.transpose().mult(Sk.invert()));
+        SimpleMatrix y_pred = Zk.minus(Hk.mult(Xk));
+        SimpleMatrix Sk = Hk.mult(Pk).mult(Hk.transpose()).plus(Rk);
+        SimpleMatrix KalmanGain = Pk.mult(Hk.transpose().mult(Sk.invert()));
 
-                Xk = Xk.plus(KalmanGain.mult(y_pred));
-                double updatedAngle = Xk.get(3,0);
-                Xk.set(3, 0, wraptopi(updatedAngle));
-                Log.d("EKF:", "Wrapping calc angle: "+updatedAngle+" to "+wraptopi(updatedAngle));
+        Xk = Xk.plus(KalmanGain.mult(y_pred));
+        double updatedAngle = Xk.get(3,0);
+        Xk.set(3, 0, wraptopi(updatedAngle));
+        Log.d("EKF:", "Wrapping calc angle: "+updatedAngle+" to "+wraptopi(updatedAngle));
 
-                // Creating the identity matrix of the same dimension as Pk
-                SimpleMatrix I = SimpleMatrix.identity(Pk.getNumRows());
-                Pk = (I.minus(KalmanGain.mult(Hk))).mult(Pk);
-            }
-        });
+        // Creating the identity matrix of the same dimension as Pk
+        SimpleMatrix I = SimpleMatrix.identity(Pk.getNumRows());
+        Pk = (I.minus(KalmanGain.mult(Hk))).mult(Pk);
     }
 
     public void onOpportunisticUpdate(double[] observe, long refTime){

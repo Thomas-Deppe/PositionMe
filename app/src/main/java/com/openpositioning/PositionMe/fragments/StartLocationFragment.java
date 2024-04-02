@@ -177,7 +177,7 @@ public class StartLocationFragment extends Fragment implements Observer{
                 // Starts recording data from the sensor fusion
                 sensorFusion.startRecording();
                 // Set the start location obtained
-                sensorFusion.setStartGNSSLatitude(startPosition);
+                sensorFusion.setStartGNSSLatitude(new float[] {(float) startRef[0], (float) startRef[1]});
                 sensorFusion.setStartGNSSLatLngAlt(startRef);
 
                 sensorFusion.initialiseFusionAlgorithm(startRef[0], startRef[1], sensorFusion.getElevation());
