@@ -1165,6 +1165,5 @@ public class SensorFusion implements SensorEventListener, Observer {
     public boolean getEnableFusionAlgorithms(){
         return enableKalmanFilter;
     }
-
-
+    
 }

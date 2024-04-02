@@ -920,6 +920,8 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 if (!buildingManager.getCurrentBuilding().equals(Buildings.UNSPECIFIED)){
                     floorSpinner.setSelection(buildingManager.convertFloorToSpinnerIndex(currentFloor));
                     updateFloorPlan(currentFloor);
+                    // remove the trjectory from the old floor
+                    adjustPolylineToFloor();
                 }
             }
         }
@@ -1382,11 +1384,29 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         return BitmapDescriptorFactory.fromBitmap(bitmap);
     }
 
-    public void changedFloors(){
-        // reset the points for all polylines
-        List<LatLng> a = trajectory_gnss.getPoints();
-//        trajectory_gnss.setPoints();
+    public void adjustPolylineToFloor(){
+        if (recording_map == null){return;}
 
+        // hide all polylines
+        user_trajectory.setVisible(false);
+        trajectory_wifi.setVisible(false);
+        trajectory_gnss.setVisible(false);
+        trajectory_kalman.setVisible(false);
+        trajectory_particle.setVisible(false);
+
+        // reset the points for all polylines
+        user_trajectory.setPoints(new ArrayList<LatLng>());
+        trajectory_wifi.setPoints(new ArrayList<LatLng>());
+        trajectory_wifi.setPoints(new ArrayList<LatLng>());
+        trajectory_kalman.setPoints(new ArrayList<LatLng>());
+        trajectory_particle.setPoints(new ArrayList<LatLng>());
+
+        // show all polylines again
+        user_trajectory.setVisible(true);
+        trajectory_wifi.setVisible(true);
+        trajectory_gnss.setVisible(true);
+        trajectory_kalman.setVisible(true);
+        trajectory_particle.setVisible(false);
     }
 
 }

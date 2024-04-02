@@ -182,6 +182,9 @@ public class StartLocationFragment extends Fragment implements Observer{
 
                 sensorFusion.initialiseFusionAlgorithm(startRef[0], startRef[1], sensorFusion.getElevation());
 
+                // todo:
+//                sensorFusion.setCurrentFloor();
+
 
                 // Navigate to the RecordingFragment
                 NavDirections action = StartLocationFragmentDirections.actionStartLocationFragmentToRecordingFragment();
