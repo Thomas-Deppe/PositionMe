@@ -27,7 +27,7 @@ public class ParticleFilter {
     private final double initialTrueEasting;
     private final double initialTrueNorthing;
 
-
+    // Class constructor, creates a particle filter based off the initial starting location parameters
     public ParticleFilter(double startLat, double startLong, double startAlt) {
         this.refLatitude = startLat;
         this.refLongitude = startLong;
