@@ -4,7 +4,6 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
@@ -14,7 +13,6 @@ import android.location.Location;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -32,7 +30,6 @@ import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
-import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
@@ -51,10 +48,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.GroundOverlay;
-import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
@@ -66,7 +60,6 @@ import com.openpositioning.PositionMe.Floors;
 import com.openpositioning.PositionMe.R;
 import com.openpositioning.PositionMe.SensorFusionUpdates;
 import com.openpositioning.PositionMe.sensors.SensorFusion;
-import com.openpositioning.PositionMe.sensors.SensorTypes;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -256,12 +249,15 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
             // initialise filters
             //sensorFusion.initialiseFusionAlgorithm(startPosition[0], startPosition[1], sensorFusion.getElevation());
-            System.out.println("starting logation"+startPosition);
-
+            System.out.println("starting location "+startPosition);
 
             buildingManager = new BuildingManager(recording_map);
             currentPosition = position;
             checkBuildingBounds(currentPosition);
+            //check if the user has changed floors
+            int calcFloor = sensorFusion.getCurrentFloor();
+            System.out.println("Current floor map ready  "+calcFloor);
+            updateFloor(calcFloor);
         }
     };
 
@@ -914,7 +910,9 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
      * @param calcFloor The floor calculated by the {@link com.openpositioning.PositionMe.PdrProcessing}.
      */
     private void updateFloor(int calcFloor){
+        System.out.println("Current floor in update "+calcFloor);
         if (currentFloor != calcFloor){
+            System.out.println("Current floor pass if "+calcFloor+" "+ currentFloor);
             currentFloor = calcFloor;
             if (buildingManager != null){
                 if (!buildingManager.getCurrentBuilding().equals(Buildings.UNSPECIFIED)){

@@ -15,7 +15,6 @@ import android.util.Log;
 import androidx.preference.PreferenceManager;
 
 import com.google.android.gms.maps.model.LatLng;
-import com.google.gson.JsonObject;
 import com.openpositioning.PositionMe.CoordinateTransform;
 import com.openpositioning.PositionMe.JsonConverter;
 import com.openpositioning.PositionMe.MainActivity;
@@ -30,7 +29,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -552,6 +550,8 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void onAccuracyChanged(Sensor sensor, int i) {}
     //endregion
 
+    public long getBootTime() {return this.bootTime;}
+
     /**
      * A helper function to get the calculated PDR coordinates as doubles for more accurate conversion between coordinates.
      * @return a double array with teh X and Y PDR coordiantes
@@ -947,6 +947,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         if(this.saveRecording) {
             this.saveRecording = false;
             storeTrajectoryTimer.cancel();
+            sensorFusion.setCurrentFloor(0);
         }
         if(wakeLock.isHeld()) {
             this.wakeLock.release();
