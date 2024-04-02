@@ -18,8 +18,6 @@ public class ExtendedKalmanFilter {
     private static double defaultStepLength = 0.7;
 
     // Example standard deviations for process and measurement noise
-    private double sigma_dN = 2; // Variance for dx process noise
-    private double sigma_dE = 2; // Variance for dy process noise
     private double sigma_ds = 1; // variance for ds process noise
     private double sigma_dtheta = Math.toRadians(15); // Standard deviation for dθ process noise in radians
 
@@ -38,9 +36,8 @@ public class ExtendedKalmanFilter {
     private double[] lastOpportunisticUpdate;
     private long lastOpUpdateTime;
     private boolean usingWifi = true;
-    private boolean isFirstPrediction;
+    private boolean stopEKF;
     private double prevStepLength;
-    private double prevTheta;
 
     private HandlerThread ekfThread;
     private Handler ekfHandler;
@@ -51,7 +48,7 @@ public class ExtendedKalmanFilter {
         Log.d("EKF", "====== INITIALISING EKF ======");
         this.outlierDetector = new OutlierDetector();
 
-        this.isFirstPrediction = true;
+        this.stopEKF = false;
 
         this.Xk = new SimpleMatrix(new double[][]{
                 {0},
@@ -100,7 +97,6 @@ public class ExtendedKalmanFilter {
                 {0},
                 {initialHeading}
         });
-        this.isFirstPrediction = false;
     }
 
     private void updateFk(double theta_k, double step_k){
@@ -162,6 +158,8 @@ public class ExtendedKalmanFilter {
     }
 
     public void predict(double theta_k, double step_k, double averageStepLength, long refTime) {
+        if (stopEKF) return;
+
         ekfHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -235,7 +233,8 @@ public class ExtendedKalmanFilter {
         SimpleMatrix KalmanGain = Pk.mult(Hk.transpose().mult(Sk.invert()));
 
         Xk = Xk.plus(KalmanGain.mult(y_pred));
-        double adaptedHeading = wraptopi((Math.PI/2 - theta_k));
+        double adaptedHeading = wraptopi(Xk.get(0, 0));
+        //double adaptedHeading = wraptopi((Math.PI/2 - theta_k));
         //Log.d("EKF", "XK after update: "+Xk.toString());
         Xk.set(0, 0, adaptedHeading);
         Log.d("EKF:", "Wrapping calc angle: "+adaptedHeading);
@@ -245,10 +244,10 @@ public class ExtendedKalmanFilter {
         Pk = (I.minus(KalmanGain.mult(Hk))).mult(Pk);
 
         Log.d("EKF", "======== FINISHED UPDATE ========");
-        prevTheta = (Math.PI/2 - theta_k);
     }
 
     public void onOpportunisticUpdate(double[] observe, long refTime){
+        if (stopEKF) return;
         ekfHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -266,6 +265,7 @@ public class ExtendedKalmanFilter {
     }
 
     public void onStepDetected(double pdrEast, double pdrNorth, double altitude, double theta_k, double stepLength, long refTime){
+        if (stopEKF) return;
         Log.d("EKF", "======== ON STEP DETECTED ========");
       
         if (lastOpportunisticUpdate != null && checkRelevance(refTime)){
@@ -326,6 +326,7 @@ public class ExtendedKalmanFilter {
 
     public void onObservationUpdate(double observeEast, double observeNorth, double pdrEast, double pdrNorth,
                                     double theta_k, double altitude, double penaltyFactor){
+        if (stopEKF) return;
         ekfHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -353,6 +354,8 @@ public class ExtendedKalmanFilter {
 
     public void performRecursiveCorrection (double pdrEast, double pdrNorth,
                                             double theta_k, double altitude, double penaltyFactor){
+        if (stopEKF) return;
+
         ekfHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -389,8 +392,8 @@ public class ExtendedKalmanFilter {
         return x;
     }
 
-
     public void stopFusion(){
+        this.stopEKF = true;
         Log.d("EKF:", "Stopping EKF handler");
         ekfThread.quitSafely();
     }

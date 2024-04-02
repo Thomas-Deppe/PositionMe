@@ -947,6 +947,9 @@ public class SensorFusion implements SensorEventListener, Observer {
         //setCurrentFloor(0);
         if(this.saveRecording) {
             this.saveRecording = false;
+            if (this.extendedKalmanFilter != null){
+                this.extendedKalmanFilter.stopFusion();
+            }
             storeTrajectoryTimer.cancel();
         }
         if(wakeLock.isHeld()) {
