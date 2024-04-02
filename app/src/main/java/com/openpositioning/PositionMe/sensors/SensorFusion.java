@@ -9,6 +9,7 @@ import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.os.Build;
+import android.os.Environment;
 import android.os.PowerManager;
 import android.util.Log;
 
@@ -28,6 +29,10 @@ import com.openpositioning.PositionMe.Traj;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -136,11 +141,18 @@ public class SensorFusion implements SensorEventListener, Observer {
     private float[] startLocation;
     private double[] startRef;
 
-    private boolean enableKalmanFilter = false, enableParticleFilter = true;
+    private boolean enableKalmanFilter = true, enableParticleFilter = false;
     private double[] ecefRefCoords;
 
     // Wifi values
     private List<Wifi> wifiList;
+
+    // saving data points
+    File directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+    private File file = new File(directory, "logcat.txt");
+    private FileWriter fileWriter = null;
+    private BufferedWriter bufferedWriter = null;
+
 
 
     // Over time accelerometer magnitude values since last step
@@ -252,6 +264,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.accelMagnitude = new ArrayList<>();
         // PDR
         this.pdrProcessing = new PdrProcessing(context);
+
         //Settings
         this.settings = PreferenceManager.getDefaultSharedPreferences(context);
         // Picks the Fusion Algorithm to run
@@ -768,6 +781,11 @@ public class SensorFusion implements SensorEventListener, Observer {
         for (SensorFusionUpdates observer : recordingUpdates) {
             observer.onParticleUpdate(particle_pos);
         }
+
+        long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
+        String data = "out PARTICLE " + timestamp + " " + particle_pos.latitude + " " + particle_pos.longitude + " " + getElevation();
+        System.out.println(data);
+        writeLineTextFile(data);
     }
 
     /**
@@ -779,9 +797,10 @@ public class SensorFusion implements SensorEventListener, Observer {
             observer.onKalmanUpdate(kalman_pos);
         }
         // store the value - ID, timestamp, latlng
-
         long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
-        System.out.println("out KALMAN " + timestamp + " " + kalman_pos.latitude + " " + kalman_pos.longitude + " " + getElevation());
+        String data = "out KALMAN " + timestamp + " " + kalman_pos.latitude + " " + kalman_pos.longitude + " " + getElevation();
+        System.out.println(data);
+        writeLineTextFile(data);
     }
 
     /**
@@ -935,6 +954,7 @@ public class SensorFusion implements SensorEventListener, Observer {
             this.filter_coefficient = Float.parseFloat(settings.getString("accel_filter", "0.96"));
         }
         else {this.filter_coefficient = FILTER_COEFFICIENT;}
+        initiateTextFile();
     }
 
     /**
@@ -952,6 +972,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         if(this.saveRecording) {
             this.saveRecording = false;
             this.turnDetector.stopMonitoring();
+            this.closeTextFile();
             if (this.extendedKalmanFilter != null){
                 this.extendedKalmanFilter.stopFusion();
             }
@@ -1105,7 +1126,9 @@ public class SensorFusion implements SensorEventListener, Observer {
 
         // store the value - ID, timestamp, latlng
         long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
-        System.out.println("out PDR " + timestamp + " " + latitude + " " + longitude + " " + getElevation());
+        String data = "out PDR " + timestamp + " " + latitude + " " + longitude + " " + getElevation();
+        System.out.println(data);
+        writeLineTextFile(data);
     }
 
     public void updateFusionWifi(JSONObject wifiresponse){
@@ -1133,7 +1156,9 @@ public class SensorFusion implements SensorEventListener, Observer {
 
             // store the value - ID, timestamp, latlng
             long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
-            System.out.println("out wifi " + timestamp + " " + latitude + " " + longitude + " " + getElevation());
+            String data = "out wifi " + timestamp + " " + latitude + " " + longitude + " " + getElevation();
+            System.out.println(data);
+            writeLineTextFile(data);
 
         } catch (JSONException e) {
             e.printStackTrace();
@@ -1149,10 +1174,9 @@ public class SensorFusion implements SensorEventListener, Observer {
         }
         // store the value - ID, timestamp, latlng
         long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
-        System.out.println("out GNSS " + timestamp + " " + latitude + " " + longitude + " " + getElevation());
-        //double[] enuCoords = CoordinateTransform.geodeticToEnu(latitude, longitude, altitude, startRef[0], startRef[1], startRef[2]);
-        //Log.d("EKF:", "ENU coordinates East " +enuCoords[0]+" North "+enuCoords[1]+" Up "+enuCoords[2]);
-        //extendedKalmanFilter.onObservationUpdate(enuCoords[0], enuCoords[1], pdrCalc[0], pdrCalc[1], getElevation());
+        String data = "out GNSS " + timestamp + " " + latitude + " " + longitude + " " + getElevation();
+        System.out.println(data);
+        writeLineTextFile(data);
     }
 
 
@@ -1167,9 +1191,10 @@ public class SensorFusion implements SensorEventListener, Observer {
 
     public void setEnableFusionAlgorithms(){
         // Check what fusion algorithm is set to be used
-        enableKalmanFilter = this.settings.getBoolean("kalman_fusion_enable", true);
+        enableParticleFilter = this.settings.getBoolean("fusion_enable", false);
+        enableKalmanFilter = !enableParticleFilter;
+
         System.out.println("kalman enable: "+ enableKalmanFilter);
-        enableParticleFilter = this.settings.getBoolean("particle_fusion_enable", false);
         System.out.println("particle enable: "+ enableParticleFilter);
     }
 
@@ -1178,4 +1203,35 @@ public class SensorFusion implements SensorEventListener, Observer {
     }
 
 
+
+    public void initiateTextFile(){
+        try {
+            fileWriter = new FileWriter(file);
+            bufferedWriter = new BufferedWriter(fileWriter);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public void writeLineTextFile(String data){
+        try {
+            bufferedWriter.append(data);
+            bufferedWriter.newLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void closeTextFile() {
+        try {
+            if (bufferedWriter != null) {
+                bufferedWriter.close();
+            }
+            if (fileWriter != null) {
+                fileWriter.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
 }

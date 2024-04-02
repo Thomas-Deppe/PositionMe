@@ -148,11 +148,11 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     //Used to manipulate the floor plans displayed and track which building the user is in.
     private BuildingManager buildingManager;
     //The coordinates of the users current position
-    private LatLng currentPosition, wifiPosition, currFusionPosition;
+    private LatLng currentPosition, wifiPosition, pdrPosition;
 
     //Stores the markers displaying the users location and GNSS position so they can be manipulated without removing and re-adding them
     private Marker GNSS_marker;
-    private Marker user_marker;
+    private Marker user_marker; // set to fusion
 
 
     //The users current floor. The user is expected to start on the ground floor.
@@ -251,8 +251,10 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             //sensorFusion.initialiseFusionAlgorithm(startPosition[0], startPosition[1], sensorFusion.getElevation());
             System.out.println("starting location "+startPosition);
 
+            // set to position from StartRecording Fragment
             buildingManager = new BuildingManager(recording_map);
             currentPosition = position;
+            pdrPosition = position;
             checkBuildingBounds(currentPosition);
             //check if the user has changed floors
             int calcFloor = sensorFusion.getCurrentFloor();
@@ -431,8 +433,8 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
              */
             @Override
             public void onClick(View view) {
-                if (currFusionPosition != null) {
-                    sensorFusion.addFusionTagTraj(currFusionPosition);
+                if (currentPosition != null) {
+                    sensorFusion.addFusionTagTraj(currentPosition);
                 }
             }
         });
@@ -569,7 +571,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 if (recording_map != null) {
                     //Transform the ENU coordinates to WSG84 coordinates google maps uses
                     LatLng user_step = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startPosition[0], startPosition[1], ecefRefCoords);
-                    currentPosition = user_step;
+                    pdrPosition = user_step;
                     updateUserTrajectory(user_step);
                     displayPolylineAsDots(user_trajectory.getPoints(), Color.BLUE, pdrMarker, displayPRDToggle.isChecked());
 //                    user_marker.setPosition(user_step);
@@ -622,7 +624,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
                     // todo: set the marker to this trajectory as ground truth
                     if (!sensorFusion.getEnableFusionAlgorithms()){
-                        currFusionPosition = particleAlgPosition;
+                        currentPosition = particleAlgPosition;
                     }
 
                     if (showGNSS != null && showGNSS.isChecked()) {
@@ -636,7 +638,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                         poserrorGNSS[0] = distanceBetween[0];
 
                         // get current PDR and compare it
-                        Location.distanceBetween(currentPosition.latitude, currentPosition.longitude, particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
+                        Location.distanceBetween(pdrPosition.latitude, pdrPosition.longitude, particleAlgPosition.latitude, particleAlgPosition.longitude, distanceBetween);
                         poserrorPDR[0] = distanceBetween[0];
 
                         // get current wifi server position and compare it
@@ -676,7 +678,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
                 // if kalman filter is selected to run
                 if (sensorFusion.getEnableFusionAlgorithms()){
-                    currFusionPosition = kalmanAlgPosition;
+                    currentPosition = kalmanAlgPosition;
                     user_marker.setPosition(kalmanAlgPosition);
                 }
                 else{return;}
@@ -693,7 +695,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                         poserrorGNSS[0] = distanceBetween[0];
 
                         // get current PDR and compare it
-                        Location.distanceBetween(currentPosition.latitude, currentPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
+                        Location.distanceBetween(pdrPosition.latitude, pdrPosition.longitude, kalmanAlgPosition.latitude, kalmanAlgPosition.longitude, distanceBetween);
                         poserrorPDR[0] = distanceBetween[0];
 
                         // get current wifi server position and compare it
@@ -738,7 +740,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
                 updateGNSSTrajectory(new LatLng(GNSS_pos[0] , GNSS_pos[1]));
                 displayPolylineAsDots(trajectory_gnss.getPoints(), Color.RED, gnssmarker, displayGNSSToggle.isChecked());
-                System.out.println("gnss was displayed" + currentPosition);
             }
         });
     }
@@ -918,6 +919,8 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 if (!buildingManager.getCurrentBuilding().equals(Buildings.UNSPECIFIED)){
                     floorSpinner.setSelection(buildingManager.convertFloorToSpinnerIndex(currentFloor));
                     updateFloorPlan(currentFloor);
+                    // remove the trjectory from the old floor
+                    adjustPolylineToFloor();
                 }
             }
         }
@@ -1235,6 +1238,13 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             }
         });
 
+        if (sensorFusion.getEnableFusionAlgorithms()){
+            displayParticleToggle.setVisibility(View.GONE);
+        }
+        else {
+            displayKalmanToggle.setVisibility(View.GONE);
+        }
+
         
         this.floorSpinner = recordingSettingsDialog.findViewById(R.id.floorSpinner);
         this.floorSpinner.setVisibility(View.GONE);
@@ -1380,11 +1390,29 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         return BitmapDescriptorFactory.fromBitmap(bitmap);
     }
 
-    public void changedFloors(){
-        // reset the points for all polylines
-        List<LatLng> a = trajectory_gnss.getPoints();
-//        trajectory_gnss.setPoints();
+    public void adjustPolylineToFloor(){
+        if (recording_map == null){return;}
 
+        // hide all polylines
+        user_trajectory.setVisible(false);
+        trajectory_wifi.setVisible(false);
+        trajectory_gnss.setVisible(false);
+        trajectory_kalman.setVisible(false);
+        trajectory_particle.setVisible(false);
+
+        // reset the points for all polylines
+        user_trajectory.setPoints(new ArrayList<LatLng>());
+        trajectory_wifi.setPoints(new ArrayList<LatLng>());
+        trajectory_wifi.setPoints(new ArrayList<LatLng>());
+        trajectory_kalman.setPoints(new ArrayList<LatLng>());
+        trajectory_particle.setPoints(new ArrayList<LatLng>());
+
+        // show all polylines again
+        user_trajectory.setVisible(true);
+        trajectory_wifi.setVisible(true);
+        trajectory_gnss.setVisible(true);
+        trajectory_kalman.setVisible(true);
+        trajectory_particle.setVisible(false);
     }
 
 }
