@@ -128,16 +128,15 @@ public class ExtendedKalmanFilter {
         Log.d("EKF:", "update Qk... average Step = "+averageStepLength+ " theta_k = "+theta_k + " Penalty = "+penaltyFactor);
         double step_error = (stepPercentageError * averageStepLength + stepMisdirection) * penaltyFactor;
         //float adaptedHeading = (float) (Math.PI/2 - theta_k);
-        double adaptedHeading = theta_k;
-        double north_error = step_error*Math.cos(adaptedHeading);
-        double east_error = step_error*Math.sin(adaptedHeading);
         double bearing_error = calculateBearingPenalty(refTime);
-        Log.d("EKF:", "new error variances: step_error = "+step_error+ " north_error = "+north_error+" east_error = "+east_error);
 
-        this.Qk.set(0, 0, north_error*north_error);
-        this.Qk.set(1, 1, east_error*east_error);
-        this.Qk.set(2, 2, step_error*step_error);
-        this.Qk.set(3, 3, bearing_error*bearing_error);
+        Log.d("EKF:", "update Qk... step_error = "+step_error+ " bearing_penalty = "+bearing_error +" Penalty = "+penaltyFactor+" bearing penalty = "+calculateBearingPenalty(refTime));
+
+        //this.Qk.set(0, 0, north_error*north_error);
+        //this.Qk.set(1, 1, east_error*east_error);
+
+        this.Qk.set(0, 0, bearing_error*bearing_error);
+        this.Qk.set(1, 1, step_error*step_error);
     }
 
     private void updateRk(double penaltyFactor){
@@ -195,7 +194,7 @@ public class ExtendedKalmanFilter {
                 Xk.set(2,0, (Xk_y+add.get(2, 0)));
 
                 updateFk(adaptedHeading, prevStepLength);
-                //updateQk(averageStepLength, adaptedHeading, refTime);
+                updateQk(averageStepLength, adaptedHeading, refTime);
 
                 SimpleMatrix L_k = new SimpleMatrix(new double[][]{
                         {1,0},
@@ -226,8 +225,8 @@ public class ExtendedKalmanFilter {
         SimpleMatrix Zk = new SimpleMatrix(new double[][]{{observation_k[0]}, {observation_k[1]}});
         Log.d("EKF", "Observation matrix = "+Zk.toString());
 
-        //updateRk(penaltyFactor);
-        updateRk();
+        updateRk(penaltyFactor);
+        //updateRk();
         Log.d("EKF", "RK = " +Rk.toString());
 
         SimpleMatrix y_pred = Zk.minus(Hk.mult(Xk));
@@ -299,11 +298,20 @@ public class ExtendedKalmanFilter {
     private double calculateTimePenalty(long currentTime) {
         // Calculate elapsed time since last opportunistic (e.g., WiFi) update
         long elapsedTime = currentTime - lastOpUpdateTime;
-        Log.d("EKF:", "Last update time: "+lastOpUpdateTime+" current time: "+currentTime + " elapsed time: "+elapsedTime);
-        // Define how the penalty increases over time. This is an example and can be adjusted.
-        double penaltyFactor = 1.0 + (elapsedTime / 1000.0); // Simple linear penalty
-        Log.d("EKF:", "Penalty factor: "+penaltyFactor);
-        return Math.max(penaltyFactor, 1); // Ensure the penalty factor never reduces measurement noise
+        Log.d("EKF:", "Last update time: " + lastOpUpdateTime + " current time: " + currentTime + " elapsed time: " + elapsedTime);
+
+        // Define the maximum elapsedTime that corresponds to the maximum penalty (4.0)
+        // This is an example value and should be adjusted based on your requirements
+        final long maxElapsedTimeForMaxPenalty = 3000; // Example: 3000 milliseconds for max penalty
+
+        // Calculate the penalty factor with a range from 1 to 4
+        // It linearly increases based on elapsedTime, capped at maxElapsedTimeForMaxPenalty
+        double penaltyFactor = 1.0 + 3.0 * Math.min(elapsedTime, maxElapsedTimeForMaxPenalty) / maxElapsedTimeForMaxPenalty;
+
+        Log.d("EKF:", "Penalty factor: " + penaltyFactor);
+
+        // The penaltyFactor is already ensured to be between 1 and 4, no need for Math.max
+        return penaltyFactor;
     }
 
     // Calculates the penalty factor based on the elapsed time since the last WiFi update

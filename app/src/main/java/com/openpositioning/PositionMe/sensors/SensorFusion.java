@@ -156,6 +156,8 @@ public class SensorFusion implements SensorEventListener, Observer {
 
     private ParticleFilter particleFilter;
     private ExtendedKalmanFilter extendedKalmanFilter;
+    //private ExtendedKalmanFilterPrev extendedKalmanFilter;
+
     private TurnDetector turnDetector;
 
     //Creates a list of classes which wish to receive asynchronous updates from this class.
@@ -1113,6 +1115,7 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void initialiseFusionAlgorithm(double initialLat, double initialLong, double initialAlt){
         this.particleFilter = new ParticleFilter(initialLat, initialLong, initialAlt);
         this.extendedKalmanFilter = new ExtendedKalmanFilter();
+        //this.extendedKalmanFilter = new ExtendedKalmanFilterPrev();
     }
 
 
