@@ -1382,5 +1382,12 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         return BitmapDescriptorFactory.fromBitmap(bitmap);
     }
 
+    public void changedFloors(){
+        // reset the points for all polylines
+        List<LatLng> a = trajectory_gnss.getPoints();
+//        trajectory_gnss.setPoints();
+
+    }
+
 }
 

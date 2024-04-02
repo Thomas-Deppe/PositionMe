@@ -763,9 +763,6 @@ public class SensorFusion implements SensorEventListener, Observer {
         for (SensorFusionUpdates observer : recordingUpdates) {
             observer.onParticleUpdate(particle_pos);
         }
-
-        // store the value - ID, timestamp, latlng
-        System.out.println("00 PARTICLE " + System.currentTimeMillis() + " " + particle_pos);
     }
 
     /**
@@ -777,7 +774,9 @@ public class SensorFusion implements SensorEventListener, Observer {
             observer.onKalmanUpdate(kalman_pos);
         }
         // store the value - ID, timestamp, latlng
-        System.out.println("00 KALMAN " + System.currentTimeMillis() + " " + kalman_pos);
+
+        long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
+        System.out.println("out KALMAN " + timestamp + " " + kalman_pos.latitude + " " + kalman_pos.longitude + " " + getElevation());
     }
 
     /**
@@ -1094,7 +1093,8 @@ public class SensorFusion implements SensorEventListener, Observer {
         }
 
         // store the value - ID, timestamp, latlng
-        System.out.println("00 PDR " + System.currentTimeMillis() + " " + positionPDR);
+        long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
+        System.out.println("out PDR " + timestamp + " " + latitude + " " + longitude + " " + getElevation());
     }
 
     public void updateFusionWifi(JSONObject wifiresponse){
@@ -1121,7 +1121,8 @@ public class SensorFusion implements SensorEventListener, Observer {
             }
 
             // store the value - ID, timestamp, latlng
-            System.out.println("00 WIFI " + System.currentTimeMillis() + " " + positionWifi);
+            long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
+            System.out.println("out wifi " + timestamp + " " + latitude + " " + longitude + " " + getElevation());
 
         } catch (JSONException e) {
             e.printStackTrace();
@@ -1136,7 +1137,8 @@ public class SensorFusion implements SensorEventListener, Observer {
             //double[] pdrCalc = getCurrentPDRCalc();
         }
         // store the value - ID, timestamp, latlng
-        System.out.println("00 GNSS " + System.currentTimeMillis() + " " + new LatLng(latitude,longitude));
+        long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
+        System.out.println("out GNSS " + timestamp + " " + latitude + " " + longitude + " " + getElevation());
         //double[] enuCoords = CoordinateTransform.geodeticToEnu(latitude, longitude, altitude, startRef[0], startRef[1], startRef[2]);
         //Log.d("EKF:", "ENU coordinates East " +enuCoords[0]+" North "+enuCoords[1]+" Up "+enuCoords[2]);
         //extendedKalmanFilter.onObservationUpdate(enuCoords[0], enuCoords[1], pdrCalc[0], pdrCalc[1], getElevation());
