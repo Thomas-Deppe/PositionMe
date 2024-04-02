@@ -27,8 +27,15 @@ public class ParticleFilter {
     private final double initialTrueEasting;
     private final double initialTrueNorthing;
 
+    // Outlier Detector
+    private OutlierDetector outlierDetector;
+
+    //Boot time for logs
+    private final long bootTime = SensorFusion.getInstance().getBootTime();
+
     // Class constructor, creates a particle filter based off the initial starting location parameters
     public ParticleFilter(double startLat, double startLong, double startAlt) {
+        this.outlierDetector = new OutlierDetector();
         this.refLatitude = startLat;
         this.refLongitude = startLong;
         this.refAlt = startAlt;
@@ -110,8 +117,8 @@ public class ParticleFilter {
     public void update(double measuredLat, double measuredLong) {
         float[] distanceBetween = new float[1];
         Location.distanceBetween(measuredLat, measuredLong, refLatitude, refLongitude, distanceBetween);
-        if (distanceBetween[0] < 1) {
-            Log.d("PARTICLE_FILTER", "New LatLang distance too small: " + distanceBetween[0]);
+        if (outlierDetector.detectOutliers(distanceBetween[0])) {
+            Log.d("PARTICLE_FILTER", "Outlier Detected at: " + measuredLat + "," + measuredLong + "," + distanceBetween[0]);
             return;
         }
 
@@ -119,10 +126,15 @@ public class ParticleFilter {
         double[] enucoords = CoordinateTransform.geodeticToEnu(measuredLat,measuredLong,refAlt,refLatitude,refLongitude,refAlt);
         updateMeasurementModel(enucoords[0], enucoords[1]);
         resampleParticles();
-        LatLng enu_prediction = predict();
-        LatLng prediction = new LatLng(refLatitude + enu_prediction.latitude, refLongitude + enu_prediction.longitude);
-        SensorFusion.getInstance().notifyParticleUpdate(prediction);
-        Log.d("PARTICLE_FILTER", "Prediction LatLong: " + prediction.latitude + " " + prediction.longitude);
+        LatLng prediction = predict();
+        LatLng new_prediction = new LatLng(refLatitude + prediction.latitude, refLongitude + prediction.longitude);
+        SensorFusion.getInstance().notifyParticleUpdate(new_prediction);
+        Log.d("PARTICLE_FILTER", "Prediction LatLong: " + new_prediction.latitude + " " + new_prediction.longitude);
+        double[] enu_prediction = CoordinateTransform.geodeticToEnu(new_prediction.latitude,new_prediction.longitude,refAlt,refLatitude,refLongitude,refAlt);
+//        String positionENU = enu_prediction[0] + " " + enu_prediction[1] + " " + enu_prediction[2];
+        // Log for saving
+//        long timestamp = android.os.SystemClock.uptimeMillis() - this.bootTime;
+//        System.out.println("out PARTICLE " + timestamp + " " + positionENU);
     }
 
     public LatLng predict() {
