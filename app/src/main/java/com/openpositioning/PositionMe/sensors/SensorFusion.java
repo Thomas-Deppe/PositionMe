@@ -156,6 +156,7 @@ public class SensorFusion implements SensorEventListener, Observer {
 
     private ParticleFilter particleFilter;
     private ExtendedKalmanFilter extendedKalmanFilter;
+    private TurnDetector turnDetector;
 
     //Creates a list of classes which wish to receive asynchronous updates from this class.
     private List<SensorFusionUpdates> recordingUpdates;
@@ -196,6 +197,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.startRef = new double[3];
 
         this.recordingUpdates = new ArrayList<>();
+        this.turnDetector = new TurnDetector();
     }
 
 
@@ -354,7 +356,7 @@ public class SensorFusion implements SensorEventListener, Observer {
                 SensorManager.getRotationMatrixFromVector(rotationVectorDCM,this.rotation);
                 SensorManager.getOrientation(rotationVectorDCM, this.orientation);
                 notifySensorUpdate(SensorFusionUpdates.update_type.ORIENTATION_UPDATE);
-                //this.turnDetector.ProcessOrientationData(this.orientation[0]);
+                this.turnDetector.ProcessOrientationData(this.orientation[0]);
                 break;
 
             case Sensor.TYPE_STEP_DETECTOR:
@@ -362,13 +364,15 @@ public class SensorFusion implements SensorEventListener, Observer {
                 long stepTime = android.os.SystemClock.uptimeMillis() - bootTime;
                 float[] newCords = this.pdrProcessing.updatePdr(stepTime, this.accelMagnitude, this.orientation[0]);
                 float step_length = this.pdrProcessing.getStepLength();
-                //update fusion processing algorithm with new PDR
-                this.extendedKalmanFilter.predict(this.orientation[0], step_length, passAverageStepLength());
-                this.updateFusionPDR();
 
                 // PDR to display
                 notifySensorUpdate(SensorFusionUpdates.update_type.PDR_UPDATE);
                 if (saveRecording) {
+                    //update fusion processing algorithm with new PDR
+                    this.extendedKalmanFilter.predict(this.orientation[0], step_length, passAverageStepLength(),
+                            (android.os.SystemClock.uptimeMillis() - bootTime),
+                            this.turnDetector.onStepDetected(this.orientation[0]));
+                    this.updateFusionPDR();
                     // Store the PDR coordinates for plotting the trajectory
                     this.pathView.drawTrajectory(newCords);
                 }
@@ -625,6 +629,7 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void setStartGNSSLatLngAlt(double[] startPosition){
         this.startRef = startPosition;
         this.ecefRefCoords = CoordinateTransform.geodeticToEcef(startPosition[0],startPosition[1], startPosition[2]);
+        System.out.println("OUT START LOCATION "+startPosition[0]+" "+startPosition[1]+ " "+startPosition[2]);
     }
 
     public float getAbsoluteElevation(){
@@ -763,9 +768,6 @@ public class SensorFusion implements SensorEventListener, Observer {
         for (SensorFusionUpdates observer : recordingUpdates) {
             observer.onParticleUpdate(particle_pos);
         }
-
-        // store the value - ID, timestamp, latlng
-        System.out.println("00 PARTICLE " + System.currentTimeMillis() + " " + particle_pos);
     }
 
     /**
@@ -777,7 +779,9 @@ public class SensorFusion implements SensorEventListener, Observer {
             observer.onKalmanUpdate(kalman_pos);
         }
         // store the value - ID, timestamp, latlng
-        System.out.println("00 KALMAN " + System.currentTimeMillis() + " " + kalman_pos);
+
+        long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
+        System.out.println("out KALMAN " + timestamp + " " + kalman_pos.latitude + " " + kalman_pos.longitude + " " + getElevation());
     }
 
     /**
@@ -912,6 +916,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.stepCounter = 0;
         this.absoluteStartTime = System.currentTimeMillis();
         this.bootTime = android.os.SystemClock.uptimeMillis();
+        this.turnDetector.startMonitoring();
         // Protobuf trajectory class for sending sensor data to restful API
         this.trajectory = Traj.Trajectory.newBuilder()
                 .setAndroidVersion(Build.VERSION.RELEASE)
@@ -946,6 +951,10 @@ public class SensorFusion implements SensorEventListener, Observer {
         //setCurrentFloor(0);
         if(this.saveRecording) {
             this.saveRecording = false;
+            this.turnDetector.stopMonitoring();
+            if (this.extendedKalmanFilter != null){
+                this.extendedKalmanFilter.stopFusion();
+            }
             storeTrajectoryTimer.cancel();
         }
         if(wakeLock.isHeld()) {
@@ -1094,7 +1103,8 @@ public class SensorFusion implements SensorEventListener, Observer {
         }
 
         // store the value - ID, timestamp, latlng
-        System.out.println("00 PDR " + System.currentTimeMillis() + " " + positionPDR);
+        long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
+        System.out.println("out PDR " + timestamp + " " + latitude + " " + longitude + " " + getElevation());
     }
 
     public void updateFusionWifi(JSONObject wifiresponse){
@@ -1121,7 +1131,8 @@ public class SensorFusion implements SensorEventListener, Observer {
             }
 
             // store the value - ID, timestamp, latlng
-            System.out.println("00 WIFI " + System.currentTimeMillis() + " " + positionWifi);
+            long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
+            System.out.println("out wifi " + timestamp + " " + latitude + " " + longitude + " " + getElevation());
 
         } catch (JSONException e) {
             e.printStackTrace();
@@ -1136,7 +1147,8 @@ public class SensorFusion implements SensorEventListener, Observer {
             //double[] pdrCalc = getCurrentPDRCalc();
         }
         // store the value - ID, timestamp, latlng
-        System.out.println("00 GNSS " + System.currentTimeMillis() + " " + new LatLng(latitude,longitude));
+        long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
+        System.out.println("out GNSS " + timestamp + " " + latitude + " " + longitude + " " + getElevation());
         //double[] enuCoords = CoordinateTransform.geodeticToEnu(latitude, longitude, altitude, startRef[0], startRef[1], startRef[2]);
         //Log.d("EKF:", "ENU coordinates East " +enuCoords[0]+" North "+enuCoords[1]+" Up "+enuCoords[2]);
         //extendedKalmanFilter.onObservationUpdate(enuCoords[0], enuCoords[1], pdrCalc[0], pdrCalc[1], getElevation());
