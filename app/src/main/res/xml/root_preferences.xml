@@ -42,17 +42,10 @@
             app:defaultValue="false"/>
 
         <SwitchPreferenceCompat
-            app:key="kalman_fusion_enable"
-            app:title="@string/kalman_fusion_title"
-            app:summaryOff="@string/kalman_fusion_off"
-            app:summaryOn="@string/kalman_fusion_on"
-            app:defaultValue="true"/>
-
-        <SwitchPreferenceCompat
-            app:key="particle_fusion_enable"
-            app:title="@string/particle_fusion_title"
-            app:summaryOff="@string/particle_fusion_off"
-            app:summaryOn="@string/particle_fusion_on"
+            app:key="fusion_enable"
+            app:title="@string/fusion_title"
+            app:summaryOff="@string/fusion_off"
+            app:summaryOn="@string/fusion_on"
             app:defaultValue="false"/>
 
         <SeekBarPreference

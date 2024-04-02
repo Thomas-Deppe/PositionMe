@@ -9,6 +9,7 @@ import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.os.Build;
+import android.os.Environment;
 import android.os.PowerManager;
 import android.util.Log;
 
@@ -142,16 +143,18 @@ public class SensorFusion implements SensorEventListener, Observer {
     private float[] startLocation;
     private double[] startRef;
 
-    private boolean enableKalmanFilter = false, enableParticleFilter = true;
+    private boolean enableKalmanFilter = true, enableParticleFilter = false;
     private double[] ecefRefCoords;
 
     // Wifi values
     private List<Wifi> wifiList;
 
     // saving data points
-    private File file = new File("logcat.txt");
+    File directory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+    private File file = new File(directory, "logcat.txt");
     private FileWriter fileWriter = null;
     private BufferedWriter bufferedWriter = null;
+
 
 
     // Over time accelerometer magnitude values since last step
@@ -263,6 +266,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.accelMagnitude = new ArrayList<>();
         // PDR
         this.pdrProcessing = new PdrProcessing(context);
+
         //Settings
         this.settings = PreferenceManager.getDefaultSharedPreferences(context);
         // Picks the Fusion Algorithm to run
@@ -950,6 +954,7 @@ public class SensorFusion implements SensorEventListener, Observer {
             this.filter_coefficient = Float.parseFloat(settings.getString("accel_filter", "0.96"));
         }
         else {this.filter_coefficient = FILTER_COEFFICIENT;}
+        initiateTextFile();
     }
 
     /**
@@ -1185,9 +1190,10 @@ public class SensorFusion implements SensorEventListener, Observer {
 
     public void setEnableFusionAlgorithms(){
         // Check what fusion algorithm is set to be used
-        enableKalmanFilter = this.settings.getBoolean("kalman_fusion_enable", true);
+        enableParticleFilter = this.settings.getBoolean("fusion_enable", false);
+        enableKalmanFilter = !enableParticleFilter;
+
         System.out.println("kalman enable: "+ enableKalmanFilter);
-        enableParticleFilter = this.settings.getBoolean("particle_fusion_enable", false);
         System.out.println("particle enable: "+ enableParticleFilter);
     }
 
@@ -1196,11 +1202,19 @@ public class SensorFusion implements SensorEventListener, Observer {
     }
 
 
-    public void writeLineTextFile(String data){
+
+    public void initiateTextFile(){
         try {
             fileWriter = new FileWriter(file);
             bufferedWriter = new BufferedWriter(fileWriter);
-            bufferedWriter.write(data);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public void writeLineTextFile(String data){
+        try {
+            bufferedWriter.append(data);
+            bufferedWriter.newLine();
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -86,7 +86,7 @@
     <string name="error_pdr">PDR error:\t \t</string>
     <string name="error_wifi">Wifi error:\t \t</string>
     <string name="error_gnss">GNSS error:</string>
-    <string name="error_title">\t \t Fusion Algorithm (Ground Truth) </string>
+    <string name="error_title">\t Fusion Algorithm (Ground Truth) </string>
 
 
     <!-- Units only -->
@@ -112,9 +112,9 @@
     <string name="kalman_fusion_on">The app will use Kalman filter as a fusion algorithm</string>
     <string name="kalman_fusion_off">The app will not use Kalman filter as a fusion algorithm</string>
 
-    <string name="fusion_title">Use the Kalman or Particle Fusion</string>
-    <string name="fusion_on">The app will use Kalman filter as a fusion algorithm</string>
-    <string name="fusion_off">The app will use Particle filter as a fusion algorithm</string>
+    <string name="fusion_title">Switch to Particle Filter</string>
+    <string name="fusion_on">The app will use Particle filter as the fusion algorithm as default</string>
+    <string name="fusion_off">The app will use Kalman filter as the fusion algorithm as default</string>
 
     <string name="particle_fusion_title">Use the Particle Filter Fusion</string>
     <string name="particle_fusion_off">The app will use the particle filter as a fusion algorithm</string>
