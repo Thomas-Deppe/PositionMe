@@ -775,6 +775,11 @@ public class SensorFusion implements SensorEventListener, Observer {
         for (SensorFusionUpdates observer : recordingUpdates) {
             observer.onParticleUpdate(particle_pos);
         }
+
+        long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
+        String data = "out PARTICLE " + timestamp + " " + particle_pos.latitude + " " + particle_pos.longitude + " " + getElevation();
+        System.out.println(data);
+        writeLineTextFile(data);
     }
 
     /**
@@ -786,7 +791,6 @@ public class SensorFusion implements SensorEventListener, Observer {
             observer.onKalmanUpdate(kalman_pos);
         }
         // store the value - ID, timestamp, latlng
-
         long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
         String data = "out KALMAN " + timestamp + " " + kalman_pos.latitude + " " + kalman_pos.longitude + " " + getElevation();
         System.out.println(data);
