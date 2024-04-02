@@ -212,6 +212,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             recording_map.getUiSettings().setRotateGesturesEnabled(true);
             recording_map.getUiSettings().setScrollGesturesEnabled(true);
             recording_map.getUiSettings().setMyLocationButtonEnabled(true);
+            recording_map.setBuildingsEnabled(false);
 
             // Add a marker in current GPS location and move the camera
             startPosition = sensorFusion.getGNSSLatLngAlt(true);
@@ -254,7 +255,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             trajectory_particle.setZIndex(1);
 
             // initialise filters
-            sensorFusion.initialiseFusionAlgorithm(startPosition[0], startPosition[1], sensorFusion.getElevation());
+            //sensorFusion.initialiseFusionAlgorithm(startPosition[0], startPosition[1], sensorFusion.getElevation());
             System.out.println("starting logation"+startPosition);
 
 

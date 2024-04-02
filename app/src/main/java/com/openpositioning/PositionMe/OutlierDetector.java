@@ -29,6 +29,7 @@ public class OutlierDetector {
         double modifiedZscore = zScoreFactor*((Math.abs(newDistance - median)) / MAD);
 
         if (modifiedZscore > outlier_threshold){
+            Log.d("EKF", "Outlier detected: "+newDistance);
             int index = distances.indexOf(newDistance);
             distances.remove(index);
             return true;

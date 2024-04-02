@@ -39,6 +39,8 @@ public class ExtendedKalmanFilter {
     private long lastOpUpdateTime = Long.MAX_VALUE;
     private boolean usingWifi = true;
     private boolean isFirstPrediction;
+    private double prevStepLength;
+    private double prevTheta;
 
     private HandlerThread ekfThread;
     private Handler ekfHandler;
@@ -46,23 +48,42 @@ public class ExtendedKalmanFilter {
 
     public ExtendedKalmanFilter() {
 
+        Log.d("EKF", "====== INITIALISING EKF ======");
         this.outlierDetector = new OutlierDetector();
 
         this.isFirstPrediction = true;
+
+        this.Xk = new SimpleMatrix(new double[][]{
+                {0},
+                {0},
+                //{defaultStepLength},
+                {0}
+        });
         // Initial covariance matrix
-        this.Pk =  SimpleMatrix.diag(0.01, 0.01, 0.01, 0.01); // Initial error covariance // Initial uncertainty
+        //this.Pk =  SimpleMatrix.diag(0, 0, 0, 0); // Initial error covariance // Initial uncertainty
+        this.Pk =  SimpleMatrix.diag(0, 0, 0); // Initial error covariance // Initial uncertainty
 
         // Process noise covariance matrix Q
-        this.Qk = SimpleMatrix.diag((sigma_dN), (sigma_dE), (sigma_ds), (sigma_dtheta*sigma_dtheta));
+        //this.Qk = SimpleMatrix.diag((sigma_dN), (sigma_dE), (sigma_ds), (sigma_dtheta*sigma_dtheta));
+        this.Qk = SimpleMatrix.diag((sigma_ds), (sigma_dtheta*sigma_dtheta));
 
         // Measurement noise covariance matrix R
         this.Rk = SimpleMatrix.diag((sigma_north_meas*sigma_north_meas), (sigma_east_meas*sigma_east_meas));
 
         // Hk based on the observation model (static in this case)
+//        this.Hk = new SimpleMatrix(new double[][]{
+//                {1, 0, 0, 0},
+//                {0, 1, 0, 0}
+//        });
         this.Hk = new SimpleMatrix(new double[][]{
-                {1, 0, 0, 0},
-                {0, 1, 0, 0}
+                {0, 1, 0},
+                {0, 0, 1}
         });
+
+        Log.d("EKF","HK = "+Hk.toString());
+
+        this.lastOpUpdateTime = 0;
+        this.prevStepLength = defaultStepLength;
 
         initialiseBackgroundHandler();
     }
@@ -77,7 +98,6 @@ public class ExtendedKalmanFilter {
         this.Xk = new SimpleMatrix(new double[][]{
                 {0},
                 {0},
-                {defaultStepLength},
                 {initialHeading}
         });
         this.isFirstPrediction = false;
@@ -90,12 +110,18 @@ public class ExtendedKalmanFilter {
         double cosTheta = Math.cos(theta_k);
         double sinTheta = Math.sin(theta_k);
 
+//        this.Fk = new SimpleMatrix(new double[][]{
+//                {1, 0 , cosTheta, -step_k * sinTheta},
+//                {0, 1, sinTheta, step_k * cosTheta},
+//                {0, 0, 1, 0},
+//                {0, 0, 0, 1}
+//        });
         this.Fk = new SimpleMatrix(new double[][]{
-                {1, 0 , cosTheta, -step_k * sinTheta},
-                {0, 1, sinTheta, step_k * cosTheta},
-                {0, 0, 1, 0},
-                {0, 0, 0, 1}
+                {1, 0 , 0},
+                {step_k * cosTheta, 1, 0},
+                {-step_k * sinTheta, 0, 1}
         });
+        Log.d("EKF:", "FK = "+Fk.toString());
     }
 
 
@@ -131,46 +157,87 @@ public class ExtendedKalmanFilter {
             @Override
             public void run() {
                 // Update Fk based on the current state
-                Log.d("EKF:", "Predicting... "+theta_k+" "+step_k);
-                //double adaptedHeading = wraptopi((Math.PI/2 - theta_k));
+                Log.d("EKF", "======== PREDICT ========");
+                Log.d("EKF", "Predicting... "+(Math.PI/2 - theta_k)+" "+step_k);
+                double adaptedHeading = wraptopi((Math.PI/2 - theta_k));
                 //double adaptedHeading = (Math.PI/2 - theta_k);
-                double adaptedHeading = theta_k;
-                if (isFirstPrediction){
-                    initialiseStateVector(adaptedHeading);
-                }
-                updateFk(adaptedHeading, step_k);
+                //double adaptedHeading = theta_k;
+                //if (isFirstPrediction){
+                //    initialiseStateVector(adaptedHeading);
+                //}
+
+                SimpleMatrix T_mat = new SimpleMatrix(new double[][]{
+                        {1,0},
+                        {0, Math.sin(theta_k)},
+                        {0, Math.cos(theta_k)}
+                });
+
+                SimpleMatrix control_inputs = new SimpleMatrix(new double[][]{
+                        {theta_k},
+                        {prevStepLength}
+                });
+
+                SimpleMatrix add = T_mat.mult(control_inputs);
+                double Xk_bearing = Xk.get(0,0);
+                double Xk_x = Xk.get(1,0);
+                double Xk_y = Xk.get(2, 0);
+                Xk.set(0,0, (Xk_bearing+add.get(0, 0)));
+                Xk.set(1,0, (Xk_x+add.get(1, 0)));
+                Xk.set(2,0, (Xk_y+add.get(2, 0)));
+
+                updateFk(adaptedHeading, prevStepLength);
+
                 //updateQk(averageStepLength, adaptedHeading, refTime);
 
+                SimpleMatrix L_k = new SimpleMatrix(new double[][]{
+                        {1,0},
+                        {0, Math.sin(theta_k)},
+                        {0, Math.cos(theta_k)}
+                });
+
                 // Predict the state vector Xk
-                Xk = Fk.mult(Xk);
+                //Xk = Fk.mult(Xk);
 
                 // Predict the covariance matrix Pk
-                Pk = Fk.mult(Pk).mult(Fk.transpose()).plus(Qk);
-                Log.d("EKF:", "XK after predict: "+Xk.toString());
-                Log.d("EKF:", "Predicted: East = "+Xk.get(1, 0)+" North = "+Xk.get(0,0));
+                Pk = Fk.mult(Pk).mult(Fk.transpose()).plus(L_k.mult(Qk).mult(L_k.transpose()));
+                Log.d("EKF", "PK = "+Pk.toString());
+                Log.d("EKF", "XK after predict: "+Xk.toString());
+                Log.d("EKF", "Predicted: East = "+Xk.get(1, 0)+" North = "+Xk.get(2,0));
+                Log.d("EKF", "Predicted Bearing = "+Math.toDegrees(Xk.get(0,0)));
+                Log.d("EKF", "Step length = "+prevStepLength);
+
+                prevStepLength = step_k;
             }
         });
     }
 
-    public void update(double[] observation_k){
-        ekfHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                SimpleMatrix Zk = new SimpleMatrix(new double[][]{{observation_k[0]}, {observation_k[1]}});
-                //updateRk(penaltyFactor);
-                updateRk();
+    public void update(double[] observation_k, double theta_k, double penaltyFactor){
+        Log.d("EKF", "======== UPDATE ========");
+        SimpleMatrix Mk = SimpleMatrix.identity(2);
 
-                SimpleMatrix y_pred = Zk.minus(Hk.mult(Xk));
-                SimpleMatrix Sk = Hk.mult(Pk).mult(Hk.transpose()).plus(Rk);
-                SimpleMatrix KalmanGain = Pk.mult(Hk.transpose().mult(Sk.invert()));
+        SimpleMatrix Zk = new SimpleMatrix(new double[][]{{observation_k[0]}, {observation_k[1]}});
+        Log.d("EKF", "Observation matrix = "+Zk.toString());
 
-                Xk = Xk.plus(KalmanGain.mult(y_pred));
-                //double updatedAngle = Xk.get(3,0);
-                //Xk.set(3, 0, wraptopi(updatedAngle));
-                //Log.d("EKF:", "Wrapping calc angle: "+updatedAngle+" to "+wraptopi(updatedAngle));
-                Pk = Pk.minus(KalmanGain.mult(Hk).mult(Pk));
-            }
-        });
+        //updateRk(penaltyFactor);
+        updateRk();
+        Log.d("EKF", "RK = " +Rk.toString());
+
+        SimpleMatrix y_pred = Zk.minus(Hk.mult(Xk));
+        SimpleMatrix Sk = Hk.mult(Pk).mult(Hk.transpose()).plus(Mk.mult(Rk).mult(Mk.transpose()));
+        SimpleMatrix KalmanGain = Pk.mult(Hk.transpose().mult(Sk.invert()));
+
+        Xk = Xk.plus(KalmanGain.mult(y_pred));
+        double adaptedHeading = wraptopi((Math.PI/2 - theta_k));
+        //Log.d("EKF", "XK after update: "+Xk.toString());
+        Xk.set(0, 0, adaptedHeading);
+        Log.d("EKF:", "Wrapping calc angle: "+adaptedHeading);
+
+        // Creating the identity matrix of the same dimension as Pk
+        SimpleMatrix I = SimpleMatrix.identity(Pk.getNumRows());
+        Pk = (I.minus(KalmanGain.mult(Hk))).mult(Pk);
+
+        Log.d("EKF", "======== FINISHED UPDATE ========");
+        prevTheta = (Math.PI/2 - theta_k);
     }
 
     public void onOpportunisticUpdate(double[] observe, long refTime){
@@ -179,34 +246,35 @@ public class ExtendedKalmanFilter {
             public void run() {
                 Log.d("EKF:", "Opportunistic update...");
                 Log.d("EKF:", "East: "+observe[0]+ " North: "+ observe[1] + "Timestamp: " + refTime);
-                double predictedEast= Xk.get(1, 0);
-                double predictedNorth = Xk.get(0,0);
-                double distanceBetween = Math.sqrt(Math.pow(predictedEast - observe[0], 2) + Math.pow(predictedNorth - observe[1], 2));
+                //double predictedEast= Xk.get(1, 0);
+                //double predictedNorth = Xk.get(0,0);
+                //double distanceBetween = Math.sqrt(Math.pow(observe[0]-predictedEast, 2) + Math.pow(observe[1] - predictedNorth, 2));
+                //Log.d("EKF:", "Distance between " + distanceBetween);
 
-                if (!outlierDetector.detectOutliers(distanceBetween)){
-                    Log.d("EKF", "No outlier detected");
-                    lastOpportunisticUpdate = observe;
-                    lastOpUpdateTime = refTime;
-                }
+                lastOpportunisticUpdate = observe;
+                lastOpUpdateTime = refTime;
             }
         });
     }
 
     public void onStepDetected(double pdrEast, double pdrNorth, double altitude, double theta_k, double stepLength, long refTime){
+        Log.d("EKF", "======== ON STEP DETECTED ========");
+      
         if (lastOpportunisticUpdate != null && checkRelevance(refTime)){
             Log.d("EKF:", "Using observation update");
-            onObservationUpdate(lastOpportunisticUpdate[0], lastOpportunisticUpdate[1], pdrEast, pdrNorth, altitude, calculateTimePenalty(refTime));
-            return;
+            double distanceBetween = Math.sqrt(Math.pow(lastOpportunisticUpdate[0]-pdrEast, 2) + Math.pow(lastOpportunisticUpdate[1] - pdrNorth, 2));
+            if (!outlierDetector.detectOutliers(distanceBetween)) {
+                Log.d("EKF", "No outlier detected");
+
+                onObservationUpdate(lastOpportunisticUpdate[0], lastOpportunisticUpdate[1], pdrEast, pdrNorth, theta_k, altitude, calculateTimePenalty(refTime));
+                return;
+            }
         }
+        Log.d("EKF:", "Performing recursive correction");
 
-//        if (checkRelevance(refTime)){
-//            onObservationUpdate(lastOpportunisticUpdate[0], lastOpportunisticUpdate[1], pdrEast, pdrNorth, altitude, );
-//            return;
-//        }
-
-        performRecursiveCorrection(pdrEast, pdrNorth, altitude);
+        performRecursiveCorrection(pdrEast, pdrNorth, theta_k, altitude, calculateTimePenalty(refTime));
+        Log.d("EKF", "======== FINISHED ON STEP DETECTED ========");
     }
-
 
     private boolean checkRelevance(long refTime){
         long timeDifference = Math.abs(refTime - lastOpUpdateTime);
@@ -239,48 +307,58 @@ public class ExtendedKalmanFilter {
         return sigma_dtheta*elapsedTimeMinutes;// Adjust the divisor to control the rate of increase
     }
 
-    public void onObservationUpdate(double observeEast, double observeNorth, double pdrEast, double pdrNorth, double altitude, double penaltyFactor){
+    public void onObservationUpdate(double observeEast, double observeNorth, double pdrEast, double pdrNorth,
+                                    double theta_k, double altitude, double penaltyFactor){
         ekfHandler.post(new Runnable() {
             @Override
             public void run() {
-                Log.d("EKF:", "Observed... X = "+observeEast+" Y = "+observeNorth);
-                Log.d("EKF:", "PDR... X = "+pdrEast+" Y = "+pdrNorth);
-                double[] observation = new double[] {(observeNorth - pdrNorth), (observeEast - pdrEast)};
+                Log.d("EKF", "======== ON OBSERVATION UPDATE ========");
 
-                update(observation);
-                Log.d("EKF:", "XK after update: "+Xk.toString());
-                Log.d("EKF:", "East = "+Xk.get(1, 0) + " North = "+Xk.get(0,0));
+                Log.d("EKF", "Observed... X = "+observeEast+" Y = "+observeNorth);
+                Log.d("EKF", "PDR... X = "+pdrEast+" Y = "+pdrNorth);
+                double[] observation = new double[] {(observeEast - pdrEast), (observeNorth - pdrNorth)};
+
+                update(observation, theta_k, penaltyFactor);
+                Log.d("EKF", "XK after update: "+Xk.toString());
+                Log.d("EKF", "OUTPUT: East = "+Xk.get(1, 0) + " North = "+Xk.get(2,0));
+
                 double[] startPosition = SensorFusion.getInstance().getGNSSLatLngAlt(true);
                 double[] ecefRefCoords = SensorFusion.getInstance().getEcefRefCoords();
                 SensorFusion.getInstance().notifyKalmanFilterUpdate(
-                        CoordinateTransform.enuToGeodetic(Xk.get(1, 0), Xk.get(0,0),
+                        CoordinateTransform.enuToGeodetic(Xk.get(1, 0), Xk.get(2,0),
                                 altitude,
                                 startPosition[0], startPosition[1], ecefRefCoords)
                 );
+                Log.d("EKF", "======== FINISHED ON OBSERVATION UPDATE ========");
             }
         });
     }
 
-    public void performRecursiveCorrection (double pdrEast, double pdrNorth, double altitude){
+    public void performRecursiveCorrection (double pdrEast, double pdrNorth,
+                                            double theta_k, double altitude, double penaltyFactor){
         ekfHandler.post(new Runnable() {
             @Override
             public void run() {
+                Log.d("EKF", "======== RECURSIVE CORRECTION ========");
+
                 Log.d("EKF:", "PDR ... East = "+pdrEast+" North = "+pdrNorth);
                 double predictedEast= Xk.get(1, 0);
-                double predictedNorth = Xk.get(0,0);
+                double predictedNorth = Xk.get(2,0);
                 Log.d("EKF:", "Predicted ... East = "+predictedEast+" North = "+predictedNorth);
                 Log.d("EKF:", "Observation... East = "+(predictedEast - pdrEast)+" North = "+(predictedNorth - pdrNorth));
-                double[] observation = new double[] {(predictedNorth - pdrNorth), (predictedEast - pdrEast)};
-                update(observation);
-                Log.d("EKF:", "Recursive correction output... East = "+Xk.get(1, 0)+" North = "+Xk.get(0,0));
+              
+                double[] observation = new double[] {(predictedEast - pdrEast), (predictedNorth - pdrNorth)};
+                update(observation, theta_k, penaltyFactor);
+                Log.d("EKF:", "Recursive correction output... East = "+Xk.get(1, 0)+" North = "+Xk.get(2,0));
 
                 double[] startPosition = SensorFusion.getInstance().getGNSSLatLngAlt(true);
                 double[] ecefRefCoords = SensorFusion.getInstance().getEcefRefCoords();
                 SensorFusion.getInstance().notifyKalmanFilterUpdate(
-                        CoordinateTransform.enuToGeodetic(Xk.get(1, 0), Xk.get(0,0),
+                        CoordinateTransform.enuToGeodetic(Xk.get(1, 0), Xk.get(2,0),
                                 altitude,
                                 startPosition[0], startPosition[1], ecefRefCoords)
                 );
+                Log.d("EKF", "======== FINISHED RECURSIVE CORRECTION ========");
             }
         });
     }
