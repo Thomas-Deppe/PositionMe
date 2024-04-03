@@ -942,7 +942,6 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void startRecording() {
         // Acquire wakelock so the phone will record with a locked screen. Timeout after 31 minutes.
         this.wakeLock.acquire(31*60*1000L /*31 minutes*/);
-        initiateTextFile();
         this.saveRecording = true;
         this.stepCounter = 0;
         this.absoluteStartTime = System.currentTimeMillis();

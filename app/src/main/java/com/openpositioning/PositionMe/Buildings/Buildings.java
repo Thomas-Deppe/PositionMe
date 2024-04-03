@@ -35,7 +35,7 @@ public enum Buildings {
     CORRIDOR_NUCLEUS("Nucleus Corridor",
             new LatLngBounds(
                     new LatLng(55.92283144440415, -3.1747893497322983),
-                    new LatLng(55.92290963514205, -3.174606739285856)), -122.5447f,
+                    new LatLng(55.92290963514205, -3.174606739285856)), 0,
             null, 0);
 
     //Buildings data

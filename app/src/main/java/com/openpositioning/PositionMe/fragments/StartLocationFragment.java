@@ -143,6 +143,7 @@ public class StartLocationFragment extends Fragment implements Observer{
                 Log.d("MARKER LOCATION", startRef[0] + " " + startRef[1]);
                 user_marker = start_map.addMarker(new MarkerOptions()
                         .position(position)
+                        .draggable(true)
                         .title("User Position"));
                 start_map.animateCamera(CameraUpdateFactory.newLatLngZoom(position, zoom));
 
@@ -166,6 +167,7 @@ public class StartLocationFragment extends Fragment implements Observer{
                         startPosition[1] = (float) marker.getPosition().longitude;
                         startRef[0] = marker.getPosition().latitude;
                         startRef[1] = marker.getPosition().longitude;
+                        updateMarker(new LatLng(startRef[0], startRef[1]));
 
                     }
 

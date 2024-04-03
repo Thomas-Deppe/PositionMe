@@ -252,7 +252,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
             // do not display line for wifi and gnss
             trajectory_wifi.setVisible(false);
-            trajectory_gnss.setVisible(false);
 
             // initialise filters
             //sensorFusion.initialiseFusionAlgorithm(startPosition[0], startPosition[1], sensorFusion.getElevation());
@@ -604,7 +603,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                compassIcon.setRotation((float) Math.toDegrees(sensorFusion.passOrientation()));
+                compassIcon.setRotation((float) -Math.toDegrees(sensorFusion.passOrientation()));
                 if (recording_map != null) {
                     user_marker.setRotation((float) Math.toDegrees(sensorFusion.passOrientation()));
                 }
@@ -1406,9 +1405,9 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
         // show all polylines again
         user_trajectory.setVisible(true);
-        trajectory_wifi.setVisible(true);
+//        trajectory_wifi.setVisible(true);
 //        trajectory_gnss.setVisible(true);
-//        trajectory_fused.setVisible(true);
+        trajectory_fused.setVisible(true);
         //trajectory_particle.setVisible(false);
     }
 
