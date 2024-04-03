@@ -1118,19 +1118,21 @@ public class SensorFusion implements SensorEventListener, Observer {
         double[] pdrValues = getCurrentPDRCalc();
         float elevationVal = getElevation();
 
+        // local PDR LatLn point
+        LatLng positionPDR = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startRef[0], startRef[1], ecefRefCoords);
+        double latitude = positionPDR.latitude;
+        double longitude = positionPDR.longitude;
+
         // call fusion algorithm arg(double, double)
         if (fusionAlgorithmSelection) {
             this.extendedKalmanFilter.onStepDetected(pdrValues[0], pdrValues[1], elevationVal,
                     passOrientation(), this.pdrProcessing.getStepLength(),
                     (android.os.SystemClock.uptimeMillis()));
         } else {
-            // local PDR LatLn point
-            LatLng positionPDR = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startRef[0], startRef[1], ecefRefCoords);
-            double latitude = positionPDR.latitude;
-            double longitude = positionPDR.longitude;
             this.particleFilter.update(latitude, longitude);
         }
 
+        // todo this is wrong
         // store the value - ID, timestamp, latlng
         long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
         String data = "out PDR " + timestamp + " " + latitude + " " + longitude + " " + getElevation();
@@ -1146,11 +1148,10 @@ public class SensorFusion implements SensorEventListener, Observer {
             double longitude = wifiresponse.getDouble("lon");
             double floor = wifiresponse.getDouble("floor");
             this.positionWifi = new LatLng(latitude, longitude);
-            System.out.println(latitude + ", "+  longitude);
+
             // display the position on UI
             notifySensorUpdate(SensorFusionUpdates.update_type.WIFI_UPDATE);
 
-            // todo: error checking - in case the latlng are 0,0
             // call fusion algorithm
             if (fusionAlgorithmSelection){
                 if(!noCoverage) {
@@ -1187,6 +1188,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         } else {
             particleFilter.update(latitude, longitude);
         }
+
         // store the value - ID, timestamp, latlng
         long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
         String data = "out GNSS " + timestamp + " " + latitude + " " + longitude + " " + getElevation();
