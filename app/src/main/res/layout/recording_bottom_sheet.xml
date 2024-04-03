@@ -72,32 +72,12 @@
         android:orientation="horizontal">
 
         <Switch
-            android:id="@+id/displayKalman"
+            android:id="@+id/displayFused"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/display_kalman"
             android:textAlignment="viewStart"
             android:textColor="@color/cyan"
-            android:padding="8dp"
-            android:textStyle="bold"
-            android:layout_marginStart="12dp"
-            android:layout_marginTop="5dp"
-            android:textSize="20sp" />
-
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-        <Switch
-            android:id="@+id/displayParticle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/display_particle"
-            android:textAlignment="viewStart"
-            android:textColor="@color/yellow"
             android:padding="8dp"
             android:textStyle="bold"
             android:layout_marginStart="12dp"
@@ -185,7 +165,7 @@
             android:textSize="20sp" />
 
         <ToggleButton
-            android:id="@+id/toggleGNSS"
+            android:id="@+id/togglePosError"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="ToggleButton" />

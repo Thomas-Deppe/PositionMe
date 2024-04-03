@@ -1,7 +1,8 @@
-package com.openpositioning.PositionMe;
+package com.openpositioning.PositionMe.Buildings;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.openpositioning.PositionMe.R;
 
 import java.util.HashMap;
 import java.util.Map;

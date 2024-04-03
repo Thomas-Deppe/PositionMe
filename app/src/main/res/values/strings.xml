@@ -81,8 +81,7 @@
     <string name="display_pdr">Display PDR:   \t \t \t</string>
     <string name="display_wifi">Display Wifi:  \t \t \t</string>
     <string name="display_gnss">Display GNSS:  \t</string>
-    <string name="display_kalman">Kalman Filter: \t</string>
-    <string name="display_particle">Particle Filter:\t \t</string>
+    <string name="display_kalman">Fusion Filter: \t</string>
     <string name="error_pdr">PDR error:\t \t</string>
     <string name="error_wifi">Wifi error:\t \t</string>
     <string name="error_gnss">GNSS error:</string>

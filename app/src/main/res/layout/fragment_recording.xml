@@ -141,6 +141,28 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
+        <ImageView
+            android:id="@+id/coverageIndicator"
+            android:layout_width="35dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="16dp"
+            android:src="@drawable/ic_baseline_wifi_24"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/currentPositionCard"
+            app:tint="@color/pastelBlue" />
+
+        <ImageView
+            android:id="@+id/noCoverageIndicator"
+            android:layout_width="35dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="16dp"
+            android:src="@drawable/ic_baseline_diagonal_line"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/currentPositionCard"
+            app:tint="@color/red"/>
+
         <androidx.cardview.widget.CardView
             android:id="@+id/currentPositionCard"
             android:layout_width="382dp"
@@ -339,12 +361,12 @@
             android:id="@+id/settingButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginEnd="16dp"
             android:text="@string/recordingSettings"
             app:icon="@drawable/ic_baseline_settings_24"
             app:iconGravity="start"
             app:iconSize="28dp"
-            android:layout_marginTop="16dp"
-            android:layout_marginEnd="16dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/currentPositionCard" />
 

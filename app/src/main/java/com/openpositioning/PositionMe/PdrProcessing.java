@@ -7,6 +7,7 @@ import android.util.Log;
 
 import androidx.preference.PreferenceManager;
 
+import com.openpositioning.PositionMe.Utils.CircularFloatBuffer;
 import com.openpositioning.PositionMe.sensors.SensorFusion;
 
 import java.util.Arrays;
@@ -60,7 +61,6 @@ public class PdrProcessing {
     private float elevation;
     private float previousElevation;
     private int floorHeight;
-    private int currentFloor;
 
     // Buffer of most recent elevations calculated
     private CircularFloatBuffer elevationList;
@@ -72,6 +72,7 @@ public class PdrProcessing {
     // Step sum and length aggregation variables
     private float sumStepLength = 0;
     private int stepCount = 0;
+    private int currentFloor = 0;
     //endregion
 
     /**
@@ -129,7 +130,7 @@ public class PdrProcessing {
         // Array for holding initial values
         this.startElevationBuffer = new Float[3];
         // Start floor - assumed to be zero
-        this.currentFloor = 0;
+        //this.currentFloor = 0;
     }
 
     /**
@@ -404,7 +405,7 @@ public class PdrProcessing {
         // Array for holding initial values
         this.startElevationBuffer = new Float[3];
         // Start floor - assumed to be zero
-        this.currentFloor = 0;
+        //this.currentFloor = 0;
         this.previousElevation = 0;
     }
 

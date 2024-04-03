@@ -1,21 +1,24 @@
-package com.openpositioning.PositionMe.sensors;
+package com.openpositioning.PositionMe.FusionAlgorithms;
 
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 
-import com.openpositioning.PositionMe.CoordinateTransform;
-import com.openpositioning.PositionMe.OutlierDetector;
+import com.openpositioning.PositionMe.Utils.CoordinateTransform;
+import com.openpositioning.PositionMe.Utils.OutlierDetector;
+import com.openpositioning.PositionMe.sensors.SensorFusion;
+import com.openpositioning.PositionMe.sensors.TurnDetector;
 
 import org.ejml.simple.SimpleMatrix;
 
 
-public class ExtendedKalmanFilter {
+public class ExtendedKalmanFilter{
 
-    private static long relevanceThreshold = 5000;
-    private static double stepPercentageError = 0.1;
-    private static double stepMisdirection = 0.05;
-    private static double defaultStepLength = 0.7;
+    private final static long relevanceThreshold = 5000;
+    private final static double stepPercentageError = 0.1;
+    private final static double stepMisdirection = 0.05;
+    private final static double defaultStepLength = 0.7;
+    private final static long maxElapsedTimeForMaxPenalty = 3000; // Example: 3000 milliseconds for max penalty
     private static double sigma_dTheta = Math.toRadians(15); // Standard deviation for dθ process noise in radians
     private static double sigma_dPseudo = Math.toRadians(8);
     private static double sigma_dStraight = Math.toRadians(2);
@@ -37,7 +40,8 @@ public class ExtendedKalmanFilter {
 
     private double[] lastOpportunisticUpdate;
     private long lastOpUpdateTime;
-    private boolean usingWifi = true;
+    private long initialiseTime;
+    private boolean usingWifi;
     private boolean stopEKF;
     private double prevStepLength;
 
@@ -80,9 +84,10 @@ public class ExtendedKalmanFilter {
         });
 
         Log.d("EKF","HK = "+Hk.toString());
-
+        this.initialiseTime = android.os.SystemClock.uptimeMillis();
         this.lastOpUpdateTime = 0;
         this.prevStepLength = defaultStepLength;
+        this.usingWifi = false;
 
         initialiseBackgroundHandler();
     }
@@ -130,7 +135,7 @@ public class ExtendedKalmanFilter {
 
         double bearing_error = calculateBearingPenalty(thetaStd, refTime);
 
-        Log.d("EKF:", "update Qk... step_error = "+step_error+ " bearing_penalty = "+bearing_error +" Penalty = "+penaltyFactor+" bearing penalty = "+calculateBearingPenalty(thetaStd, refTime));
+        Log.d("EKF:", "update Qk... step_error = "+step_error+ " bearing_penalty = "+bearing_error +" Penalty = "+penaltyFactor+" bearing penalty = "+calculateBearingPenalty(thetaStd, (refTime-initialiseTime)));
 
         //this.Qk.set(0, 0, north_error*north_error);
         //this.Qk.set(1, 1, east_error*east_error);
@@ -196,7 +201,7 @@ public class ExtendedKalmanFilter {
                 Xk.set(2,0, (Xk_y+add.get(2, 0)));
 
                 updateFk(adaptedHeading, prevStepLength);
-                updateQk(averageStepLength, adaptedHeading, refTime, getThetaStd(userMovementInStep));
+                updateQk(averageStepLength, adaptedHeading, (refTime-initialiseTime), getThetaStd(userMovementInStep));
 
                 SimpleMatrix L_k = new SimpleMatrix(new double[][]{
                         {1,0},
@@ -212,7 +217,7 @@ public class ExtendedKalmanFilter {
                 Log.d("EKF", "PK = "+Pk.toString());
                 Log.d("EKF", "XK after predict: "+Xk.toString());
                 Log.d("EKF", "Predicted: East = "+Xk.get(1, 0)+" North = "+Xk.get(2,0));
-                Log.d("EKF", "Predicted Bearing = "+Math.toDegrees(Xk.get(0,0)));
+                Log.d("EKF", "Predicted Bearing = "+Xk.get(0,0));
                 Log.d("EKF", "Step length = "+prevStepLength);
 
                 prevStepLength = step_k;
@@ -238,6 +243,7 @@ public class ExtendedKalmanFilter {
         Xk = Xk.plus(KalmanGain.mult(y_pred));
         double adaptedHeading = wraptopi(Xk.get(0, 0));
         //double adaptedHeading = wraptopi((Math.PI/2 - theta_k));
+        //double adaptedHeading = (Math.PI/2 - theta_k);
         //Log.d("EKF", "XK after update: "+Xk.toString());
         Xk.set(0, 0, adaptedHeading);
         Log.d("EKF:", "Wrapping calc angle: "+adaptedHeading);
@@ -255,14 +261,14 @@ public class ExtendedKalmanFilter {
             @Override
             public void run() {
                 Log.d("EKF:", "Opportunistic update...");
-                Log.d("EKF:", "East: "+observe[0]+ " North: "+ observe[1] + "Timestamp: " + refTime);
+                Log.d("EKF:", "East: "+observe[0]+ " North: "+ observe[1] + "Timestamp: " + (refTime-initialiseTime));
                 //double predictedEast= Xk.get(1, 0);
                 //double predictedNorth = Xk.get(0,0);
                 //double distanceBetween = Math.sqrt(Math.pow(observe[0]-predictedEast, 2) + Math.pow(observe[1] - predictedNorth, 2));
                 //Log.d("EKF:", "Distance between " + distanceBetween);
 
                 lastOpportunisticUpdate = observe;
-                lastOpUpdateTime = refTime;
+                lastOpUpdateTime = (refTime-initialiseTime);
             }
         });
     }
@@ -270,27 +276,30 @@ public class ExtendedKalmanFilter {
     public void onStepDetected(double pdrEast, double pdrNorth, double altitude, double theta_k, double stepLength, long refTime){
         if (stopEKF) return;
         Log.d("EKF", "======== ON STEP DETECTED ========");
-      
-        if (lastOpportunisticUpdate != null && checkRelevance(refTime)){
+        Log.d("EKF:", "Last update time: " + lastOpUpdateTime + " current time: " + (refTime-initialiseTime));
+
+        if (lastOpportunisticUpdate != null && checkRelevance((refTime-initialiseTime))){
             Log.d("EKF:", "Using observation update");
             double distanceBetween = Math.sqrt(Math.pow(lastOpportunisticUpdate[0]-pdrEast, 2) + Math.pow(lastOpportunisticUpdate[1] - pdrNorth, 2));
             if (!outlierDetector.detectOutliers(distanceBetween)) {
                 Log.d("EKF", "No outlier detected");
 
-                onObservationUpdate(lastOpportunisticUpdate[0], lastOpportunisticUpdate[1], pdrEast, pdrNorth, theta_k, altitude, calculateTimePenalty(refTime));
+                onObservationUpdate(lastOpportunisticUpdate[0], lastOpportunisticUpdate[1], pdrEast, pdrNorth, theta_k, altitude, calculateTimePenalty((refTime-initialiseTime)));
                 return;
             }
         }
         Log.d("EKF:", "Performing recursive correction");
 
-        performRecursiveCorrection(pdrEast, pdrNorth, theta_k, altitude, calculateTimePenalty(refTime));
+        performRecursiveCorrection(pdrEast, pdrNorth, theta_k, altitude, calculateTimePenalty((refTime-initialiseTime)));
         Log.d("EKF", "======== FINISHED ON STEP DETECTED ========");
     }
 
     private boolean checkRelevance(long refTime){
+        if (!usingWifi) return true;
+
         long timeDifference = Math.abs(refTime - lastOpUpdateTime);
 
-        if (timeDifference <= relevanceThreshold) return true;
+        if ((timeDifference <= relevanceThreshold)) return true;
 
         this.lastOpportunisticUpdate = null;
         this.lastOpUpdateTime = 0;
@@ -306,7 +315,6 @@ public class ExtendedKalmanFilter {
 
         // Define the maximum elapsedTime that corresponds to the maximum penalty (4.0)
         // This is an example value and should be adjusted based on your requirements
-        final long maxElapsedTimeForMaxPenalty = 3000; // Example: 3000 milliseconds for max penalty
 
         // Calculate the penalty factor with a range from 1 to 4
         // It linearly increases based on elapsedTime, capped at maxElapsedTimeForMaxPenalty
@@ -343,9 +351,10 @@ public class ExtendedKalmanFilter {
                 Log.d("EKF", "XK after update: "+Xk.toString());
                 Log.d("EKF", "OUTPUT: East = "+Xk.get(1, 0) + " North = "+Xk.get(2,0));
 
+                resetOpportunisticUpdate();
                 double[] startPosition = SensorFusion.getInstance().getGNSSLatLngAlt(true);
                 double[] ecefRefCoords = SensorFusion.getInstance().getEcefRefCoords();
-                SensorFusion.getInstance().notifyKalmanFilterUpdate(
+                SensorFusion.getInstance().notifyFusedUpdate(
                         CoordinateTransform.enuToGeodetic(Xk.get(1, 0), Xk.get(2,0),
                                 altitude,
                                 startPosition[0], startPosition[1], ecefRefCoords)
@@ -376,7 +385,7 @@ public class ExtendedKalmanFilter {
 
                 double[] startPosition = SensorFusion.getInstance().getGNSSLatLngAlt(true);
                 double[] ecefRefCoords = SensorFusion.getInstance().getEcefRefCoords();
-                SensorFusion.getInstance().notifyKalmanFilterUpdate(
+                SensorFusion.getInstance().notifyFusedUpdate(
                         CoordinateTransform.enuToGeodetic(Xk.get(1, 0), Xk.get(2,0),
                                 altitude,
                                 startPosition[0], startPosition[1], ecefRefCoords)
@@ -389,12 +398,16 @@ public class ExtendedKalmanFilter {
     private double getThetaStd(TurnDetector.MovementType userMovement){
         switch (userMovement){
             case TURN:
+                Log.d("EKF", "User Turning");
                 return sigma_dTheta;
             case PSEUDO_TURN:
+                Log.d("EKF", "Pseudo turn");
                 return sigma_dPseudo;
             case STRAIGHT:
+                Log.d("EKF", "Straight");
                 return sigma_dStraight;
             default:
+                Log.d("EKF", "Default");
                 return sigma_dTheta;
         }
     }
@@ -406,6 +419,24 @@ public class ExtendedKalmanFilter {
             x = x + (Math.floor(x / (-2 * Math.PI)) + 1) * 2 * Math.PI;
         }
         return x;
+    }
+
+    private void resetOpportunisticUpdate(){
+        Log.d("EKF", "Resetting opportunistic update");
+        lastOpportunisticUpdate = null;
+        lastOpUpdateTime = (android.os.SystemClock.uptimeMillis() - initialiseTime);
+        Log.d("EKF:", "Last update time: " + lastOpUpdateTime);
+
+    }
+    public void setUsingWifi(boolean update) {
+        if (this.stopEKF) return;
+        ekfHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                usingWifi = update;
+                Log.d("EKF", "UPDATING USING WIFI"+update);
+            }
+        });
     }
 
     public void stopFusion(){

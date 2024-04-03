@@ -1,11 +1,12 @@
-package com.openpositioning.PositionMe.sensors;
+package com.openpositioning.PositionMe.FusionAlgorithms;
 
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 
-import com.openpositioning.PositionMe.CoordinateTransform;
-import com.openpositioning.PositionMe.OutlierDetector;
+import com.openpositioning.PositionMe.Utils.CoordinateTransform;
+import com.openpositioning.PositionMe.Utils.OutlierDetector;
+import com.openpositioning.PositionMe.sensors.SensorFusion;
 
 import org.ejml.simple.SimpleMatrix;
 
@@ -267,7 +268,7 @@ public class ExtendedKalmanFilterPrev {
                 Log.d("EKF:", "East = "+Xk.get(1, 0) + " North = "+Xk.get(0,0));
                 double[] startPosition = SensorFusion.getInstance().getGNSSLatLngAlt(true);
                 double[] ecefRefCoords = SensorFusion.getInstance().getEcefRefCoords();
-                SensorFusion.getInstance().notifyKalmanFilterUpdate(
+                SensorFusion.getInstance().notifyFusedUpdate(
                         CoordinateTransform.enuToGeodetic(Xk.get(1, 0), Xk.get(0,0),
                                 altitude,
                                 startPosition[0], startPosition[1], ecefRefCoords)
@@ -293,7 +294,7 @@ public class ExtendedKalmanFilterPrev {
 
                 double[] startPosition = SensorFusion.getInstance().getGNSSLatLngAlt(true);
                 double[] ecefRefCoords = SensorFusion.getInstance().getEcefRefCoords();
-                SensorFusion.getInstance().notifyKalmanFilterUpdate(
+                SensorFusion.getInstance().notifyFusedUpdate(
                         CoordinateTransform.enuToGeodetic(Xk.get(1, 0), Xk.get(0,0),
                                 altitude,
                                 startPosition[0], startPosition[1], ecefRefCoords)

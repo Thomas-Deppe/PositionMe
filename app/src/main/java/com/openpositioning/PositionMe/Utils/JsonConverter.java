@@ -1,4 +1,4 @@
-package com.openpositioning.PositionMe;
+package com.openpositioning.PositionMe.Utils;
 
 import com.openpositioning.PositionMe.sensors.Wifi;
 

@@ -14,11 +14,6 @@ import androidx.fragment.app.Fragment;
 import androidx.navigation.NavDirections;
 import androidx.navigation.Navigation;
 
-import com.openpositioning.PositionMe.JsonConverter;
-import com.openpositioning.PositionMe.R;
-import com.openpositioning.PositionMe.ServerCommunications;
-import com.openpositioning.PositionMe.sensors.Observer;
-import com.openpositioning.PositionMe.sensors.SensorFusion;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -26,7 +21,11 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.openpositioning.PositionMe.sensors.Wifi;
+import com.openpositioning.PositionMe.Utils.JsonConverter;
+import com.openpositioning.PositionMe.R;
+import com.openpositioning.PositionMe.ServerCommunications;
+import com.openpositioning.PositionMe.sensors.Observer;
+import com.openpositioning.PositionMe.sensors.SensorFusion;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -44,6 +43,9 @@ import org.json.JSONObject;
  */
 public class StartLocationFragment extends Fragment implements Observer{
 
+    //Google maps parameters
+    private GoogleMap start_map;
+    private float zoom = 19f;
     //Button to go to next fragment and save the location
     private Button button;
     //Singleton SesnorFusion class which stores data from all sensors
@@ -52,10 +54,10 @@ public class StartLocationFragment extends Fragment implements Observer{
     private LatLng position;
     //Start position of the user to be stored
     private float[] startPosition = new float[2];
-
     private double[] startRef = new double[3];
-    //Zoom of google maps
-    private float zoom = 19f;
+    private Marker user_marker;
+    boolean wifiFound = false;
+    private Integer currentFloor = null;
 
     private ServerCommunications serverCommunications;
 
@@ -78,19 +80,34 @@ public class StartLocationFragment extends Fragment implements Observer{
         ((AppCompatActivity)getActivity()).getSupportActionBar().hide();
         View rootView = inflater.inflate(R.layout.fragment_startlocation, container, false);
 
-        this.serverCommunications = ServerCommunications.getMainInstance();
-        this.serverCommunications.registerObserver(this);
-        try {
-            JSONObject jsonFingerprint = JsonConverter.toJson(sensorFusion.getWifiList());
-            Log.d("Start Position:", "Sending fingerprint to server "+ jsonFingerprint.toString());
-            this.serverCommunications.sendWifi(jsonFingerprint);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
         //Obtain the start position from the GPS data from the SensorFusion class
         startPosition = sensorFusion.getGNSSLatitude(false);
         startRef = sensorFusion.getGNSSLatLngAlt(false);
+
+        // Attempt to get Wifi
+        this.serverCommunications = ServerCommunications.getMainInstance();
+        this.serverCommunications.registerObserver(this);
+        if (sensorFusion.getWifiList() != null) {
+            try {
+                JSONObject jsonFingerprint = JsonConverter.toJson(sensorFusion.getWifiList());
+                Log.d("Start Position:", "Sending fingerprint to server "+ jsonFingerprint.toString());
+                serverCommunications.sendWifi(jsonFingerprint);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return rootView;
+    }
+
+    /**
+     * {@inheritDoc}
+     * Button onClick listener enabled to detect when to go to next fragment and start PDR recording.
+     */
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
         //If not location found zoom the map out
         if(startPosition[0]==0 && startPosition[1]==0){
             zoom = 1f;
@@ -113,19 +130,24 @@ public class StartLocationFragment extends Fragment implements Observer{
              */
             @Override
             public void onMapReady(GoogleMap mMap) {
-                mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
-                mMap.getUiSettings().setCompassEnabled(true);
-                mMap.getUiSettings().setTiltGesturesEnabled(true);
-                mMap.getUiSettings().setRotateGesturesEnabled(true);
-                mMap.getUiSettings().setScrollGesturesEnabled(true);
+                start_map = mMap;
+                start_map.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+                start_map.getUiSettings().setCompassEnabled(true);
+                start_map.getUiSettings().setTiltGesturesEnabled(true);
+                start_map.getUiSettings().setRotateGesturesEnabled(true);
+                start_map.getUiSettings().setScrollGesturesEnabled(true);
+                start_map.setBuildingsEnabled(false);
 
                 // Add a marker in current GPS location and move the camera
-                position = new LatLng(startPosition[0], startPosition[1]);
-                mMap.addMarker(new MarkerOptions().position(position).title("Start Position")).setDraggable(true);
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(position, zoom ));
+                position = new LatLng(startRef[0], startRef[1]);
+                Log.d("MARKER LOCATION", startRef[0] + " " + startRef[1]);
+                user_marker = start_map.addMarker(new MarkerOptions()
+                        .position(position)
+                        .title("User Position"));
+                start_map.animateCamera(CameraUpdateFactory.newLatLngZoom(position, zoom));
 
                 //Drag listener for the marker to execute when the markers location is changed
-                mMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener()
+                start_map.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener()
                 {
                     /**
                      * {@inheritDoc}
@@ -144,6 +166,7 @@ public class StartLocationFragment extends Fragment implements Observer{
                         startPosition[1] = (float) marker.getPosition().longitude;
                         startRef[0] = marker.getPosition().latitude;
                         startRef[1] = marker.getPosition().longitude;
+
                     }
 
                     /**
@@ -154,16 +177,7 @@ public class StartLocationFragment extends Fragment implements Observer{
                 });
             }
         });
-        return rootView;
-    }
 
-    /**
-     * {@inheritDoc}
-     * Button onClick listener enabled to detect when to go to next fragment and start PDR recording.
-     */
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
         // Add button to begin PDR recording and go to recording fragment.
         this.button = (Button) getView().findViewById(R.id.startLocationDone);
         this.button.setOnClickListener(new View.OnClickListener() {
@@ -179,16 +193,29 @@ public class StartLocationFragment extends Fragment implements Observer{
                 // Set the start location obtained
                 sensorFusion.setStartGNSSLatitude(new float[] {(float) startRef[0], (float) startRef[1]});
                 sensorFusion.setStartGNSSLatLngAlt(startRef);
-
-                sensorFusion.initialiseFusionAlgorithm(startRef[0], startRef[1], sensorFusion.getElevation());
-
-                // todo:
-//                sensorFusion.setCurrentFloor();
-
-
+                //sensorFusion.initialiseFusionAlgorithm(startRef[0], startRef[1], sensorFusion.getElevation());
+                sensorFusion.initialiseFusionAlgorithm();
+                if (currentFloor != null) {
+                    sensorFusion.setCurrentFloor(currentFloor);
+                }
                 // Navigate to the RecordingFragment
                 NavDirections action = StartLocationFragmentDirections.actionStartLocationFragmentToRecordingFragment();
                 Navigation.findNavController(view).navigate(action);
+
+            }
+        });
+    }
+
+    private void updateMarker(LatLng new_position) {
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (start_map != null && user_marker != null) {
+                    Log.d("MARKER WIFI LOCATION", new_position.latitude + " " + new_position);
+                    LatLng new_position = new LatLng(startRef[0], startRef[1]);
+                    user_marker.setPosition(new_position);
+                    start_map.animateCamera(CameraUpdateFactory.newLatLngZoom(new_position, zoom));
+                }
             }
         });
     }
@@ -198,17 +225,19 @@ public class StartLocationFragment extends Fragment implements Observer{
         if (objList == null) return;
 
         JSONObject wifiResponse = (JSONObject) objList[0];
-        Log.d("Start Position:", "Server response "+wifiResponse.toString());
 
         try {
             double latitude = wifiResponse.getDouble("lat");
             double longitude = wifiResponse.getDouble("lon");
-            double floor = wifiResponse.getDouble("floor");
+            currentFloor = wifiResponse.getInt("floor");
             startPosition[0] = (float) latitude;
             startRef[0] = latitude;
             startPosition[1] = (float) longitude;
             startRef[1] = longitude;
             startRef[2] = sensorFusion.getAbsoluteElevation();
+            wifiFound = true;
+            Log.d("MARKER WIFI RESPONSE", latitude + " " + longitude);
+            updateMarker(new LatLng(latitude,longitude));
 
         } catch (JSONException e) {
             e.printStackTrace();

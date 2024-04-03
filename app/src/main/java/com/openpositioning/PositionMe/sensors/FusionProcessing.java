@@ -3,15 +3,13 @@ package com.openpositioning.PositionMe.sensors;
 import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
-import com.openpositioning.PositionMe.CoordinateTransform;
-import com.openpositioning.PositionMe.R;
+import com.openpositioning.PositionMe.Utils.CoordinateTransform;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class FusionProcessing {
 
