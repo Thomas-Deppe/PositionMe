@@ -250,6 +250,10 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             trajectory_fused.setJointType(JointType.ROUND);
             trajectory_fused.setGeodesic(true);
 
+            // do not display line for wifi and gnss
+            trajectory_wifi.setVisible(false);
+            trajectory_gnss.setVisible(false);
+
             // initialise filters
             //sensorFusion.initialiseFusionAlgorithm(startPosition[0], startPosition[1], sensorFusion.getElevation());
             System.out.println("starting location "+ Arrays.toString(startPosition));
@@ -795,6 +799,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             points.add(point);
             trajectory_wifi.setPoints(points);
         }
+        trajectory_wifi.setVisible(false);
     }
 
     private void updateGNSSTrajectory (LatLng point){
@@ -803,6 +808,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             points.add(point);
             trajectory_gnss.setPoints(points);
         }
+        trajectory_gnss.setVisible(false);
     }
     /*
     private void updateParticleTrajectory (LatLng point){
@@ -897,7 +903,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         listOfMarkers.add(recording_map.addMarker(markerOptions.anchor(0.5f, 0.5f) .visible(false)));
 
         // if the list array is almost full, remove the oldest marker
-        if (listOfMarkers.size()-1 > 5){
+        if (listOfMarkers.size()-1 > 7){
             listOfMarkers.get(0).setVisible(false);
             listOfMarkers.remove(0);
         }
@@ -1401,8 +1407,8 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         // show all polylines again
         user_trajectory.setVisible(true);
         trajectory_wifi.setVisible(true);
-        trajectory_gnss.setVisible(true);
-        trajectory_fused.setVisible(true);
+//        trajectory_gnss.setVisible(true);
+//        trajectory_fused.setVisible(true);
         //trajectory_particle.setVisible(false);
     }
 
