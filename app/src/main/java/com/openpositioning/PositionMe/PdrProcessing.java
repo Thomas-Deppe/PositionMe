@@ -7,6 +7,7 @@ import android.util.Log;
 
 import androidx.preference.PreferenceManager;
 
+import com.openpositioning.PositionMe.Utils.CircularFloatBuffer;
 import com.openpositioning.PositionMe.sensors.SensorFusion;
 
 import java.util.Arrays;

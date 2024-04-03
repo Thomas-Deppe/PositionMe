@@ -1,4 +1,4 @@
-package com.openpositioning.PositionMe;
+package com.openpositioning.PositionMe.Utils;
 
 import android.util.Log;
 
@@ -11,7 +11,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class OutlierDetector {
-    private static final double outlier_threshold = 3.0;
+    private static final double outlier_threshold = 2.8;
     private static final double zScoreFactor = 0.6745;
 
     List<Double> distances;

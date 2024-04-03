@@ -1,10 +1,11 @@
-package com.openpositioning.PositionMe;
+package com.openpositioning.PositionMe.Buildings;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.GroundOverlay;
 import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
+import com.openpositioning.PositionMe.PdrProcessing;
 
 /**
  * A class used to manage and track the current building. It groups all the functionality to update the floor plan ground overlays. It is closely related to the
@@ -181,7 +182,7 @@ public class BuildingManager {
      * @param floor The integer of the floor that the user is now on.
      */
     public void updateFloor(int floor){
-        currentFloor = currentBuilding.convertFloorIndex(floor);
+        this.currentFloor = currentBuilding.convertFloorIndex(floor);
         System.out.println("Current floor "+floor+" "+currentFloor.toString());
         if (currentFloor != null){
             updateGroundOverlay(currentFloor);
