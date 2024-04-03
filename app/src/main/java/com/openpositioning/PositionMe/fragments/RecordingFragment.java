@@ -217,6 +217,10 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             // Add a marker in current GPS location and move the camera
             startPosition = sensorFusion.getGNSSLatLngAlt(true);
             ecefRefCoords = sensorFusion.getEcefRefCoords();
+
+            // write to data collection in sensor fusion
+            sensorFusion.startLocationWriteTextFile(startPosition);
+
             //ecefRefCoords = CoordinateTransform.geodeticToEcef(startPosition[0],startPosition[1], startPosition[2]);
             LatLng position = new LatLng(startPosition[0], startPosition[1]);
 
