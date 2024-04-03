@@ -21,7 +21,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.openpositioning.PositionMe.JsonConverter;
+import com.openpositioning.PositionMe.Utils.JsonConverter;
 import com.openpositioning.PositionMe.R;
 import com.openpositioning.PositionMe.ServerCommunications;
 import com.openpositioning.PositionMe.sensors.Observer;
@@ -193,7 +193,8 @@ public class StartLocationFragment extends Fragment implements Observer{
                 // Set the start location obtained
                 sensorFusion.setStartGNSSLatitude(new float[] {(float) startRef[0], (float) startRef[1]});
                 sensorFusion.setStartGNSSLatLngAlt(startRef);
-                sensorFusion.initialiseFusionAlgorithm(startRef[0], startRef[1], sensorFusion.getElevation());
+                //sensorFusion.initialiseFusionAlgorithm(startRef[0], startRef[1], sensorFusion.getElevation());
+                sensorFusion.initialiseFusionAlgorithm();
                 if (currentFloor != null) {
                     sensorFusion.setCurrentFloor(currentFloor);
                 }
@@ -204,6 +205,7 @@ public class StartLocationFragment extends Fragment implements Observer{
             }
         });
     }
+
     private void updateMarker(LatLng new_position) {
         getActivity().runOnUiThread(new Runnable() {
             @Override
