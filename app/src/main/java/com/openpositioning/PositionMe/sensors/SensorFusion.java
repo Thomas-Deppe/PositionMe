@@ -644,7 +644,6 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void setStartGNSSLatLngAlt(double[] startPosition){
         this.startRef = startPosition;
         this.ecefRefCoords = CoordinateTransform.geodeticToEcef(startPosition[0],startPosition[1], startPosition[2]);
-        System.out.println("OUT START LOCATION "+startPosition[0]+" "+startPosition[1]+ " "+startPosition[2]);
     }
 
     public void setNoCoverage(boolean noCoverage){
@@ -967,6 +966,9 @@ public class SensorFusion implements SensorEventListener, Observer {
             this.filter_coefficient = Float.parseFloat(settings.getString("accel_filter", "0.96"));
         }
         else {this.filter_coefficient = FILTER_COEFFICIENT;}
+
+        // initialise text file for data collection
+        initiateTextFile();
     }
 
     /**
@@ -1235,6 +1237,17 @@ public class SensorFusion implements SensorEventListener, Observer {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void startLocationWriteTextFile(double[] startPosition){
+
+        if (fileWriter == null || bufferedWriter == null || startPosition == null){return;}
+
+        // store the value - ID, timestamp, latlng
+        long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
+        String data = "out START LOCATION " + timestamp + " " + startPosition[0] + " " + startPosition[1] + " " + startPosition[2];
+        System.out.println(data);
+        writeLineTextFile(data);
     }
 
     public void closeTextFile() {
