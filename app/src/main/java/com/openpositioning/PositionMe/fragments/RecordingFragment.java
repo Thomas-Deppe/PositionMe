@@ -771,6 +771,14 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
+
+                // display the no coverage icon
+                if (latlngFromWifiServer == null){
+                    noCoverageIcon.setVisibility(View.VISIBLE);
+                    return;
+                }
+
+                // otherwise display the new wifi point
                 wifiPosition = latlngFromWifiServer;
                 if (recording_map == null){return;}
                 updateWifiTrajectory(latlngFromWifiServer);
