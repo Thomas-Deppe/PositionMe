@@ -169,7 +169,8 @@ public class ServerCommunications implements Observable {
                     e.printStackTrace();
                     System.err.println("Failure to get response");
                     success = false;
-                    //notifyObservers(2);
+                    wifiresponse = null;
+                    notifyObservers(2);
                 }
 
                 // Process the server's response
@@ -180,6 +181,8 @@ public class ServerCommunications implements Observable {
                         if (!response.isSuccessful()) {
                             System.err.println("POST error response: " + responseBody.string());
                             success = false;
+                            wifiresponse = null;
+                            notifyObservers(2);
                             return;
                         }
 
@@ -209,7 +212,8 @@ public class ServerCommunications implements Observable {
             // and notify observers and user
             System.err.println("No internet connection, No request allowed right now!");
             success = false;
-            //notifyObservers(2);
+            wifiresponse = null;
+            notifyObservers(2);
         }
 
     }
