@@ -7,20 +7,35 @@ import org.json.JSONObject;
 
 import java.util.List;
 
+/**
+ * Utility class for converting WiFi data to JSON format.
+ */
 public final class JsonConverter {
 
-    public JsonConverter() {
+    /**
+     * Private constructor to prevent instantiation of this utility class.
+     */
+    private JsonConverter() {
     }
 
+    /**
+     * Converts a list of WiFi data objects to a JSON object.
+     *
+     * @param wifiList The list of WiFi data objects to convert.
+     * @return         The JSON object representing the WiFi data.
+     * @throws JSONException If an error occurs while creating the JSON object.
+     */
     public static JSONObject toJson(List<Wifi> wifiList) throws JSONException {
         JSONObject json = new JSONObject();
         JSONObject fingerprint = new JSONObject();
+
+        // Iterate over the list of WiFi data objects
         for (Wifi data : wifiList){
             String bssid = Long.toString(data.getBssid());
-//            System.out.println(bssid);
             fingerprint.put(bssid, data.getLevel());
         }
 
+        // Add the WiFi fingerprint to the main JSON object
         json.put("wf", fingerprint);
 
         return json;
