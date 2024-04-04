@@ -14,7 +14,7 @@ public class ExtendedKalmanFilterPrev {
 
     private static final long relevanceThreshold = 5000;
     private static final double stepPercentageError = 0.1;
-    private static final double stepMisdirection = 0.05;
+    private static final double stepMisdirection = 0.1;
     private static final double defaultStepLength = 0.7;
 
     // Example standard deviations for process and measurement noise

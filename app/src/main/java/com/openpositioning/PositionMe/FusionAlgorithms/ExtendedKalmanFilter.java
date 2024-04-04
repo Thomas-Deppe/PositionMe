@@ -43,6 +43,7 @@ public class ExtendedKalmanFilter{
     private long initialiseTime;
     private boolean usingWifi;
     private boolean stopEKF;
+    private boolean useThisMeasurement;
     private double prevStepLength;
 
     private HandlerThread ekfThread;
@@ -261,13 +262,14 @@ public class ExtendedKalmanFilter{
         ekfHandler.post(new Runnable() {
             @Override
             public void run() {
-                Log.d("EKF:", "Opportunistic update...");
+                Log.d("EKF:", "======= Opportunistic update... =======");
                 Log.d("EKF:", "East: "+observe[0]+ " North: "+ observe[1] + "Timestamp: " + (refTime-initialiseTime));
-                //double predictedEast= Xk.get(1, 0);
-                //double predictedNorth = Xk.get(0,0);
-                //double distanceBetween = Math.sqrt(Math.pow(observe[0]-predictedEast, 2) + Math.pow(observe[1] - predictedNorth, 2));
-                //Log.d("EKF:", "Distance between " + distanceBetween);
-
+                if (lastOpportunisticUpdate != null) {
+                    Log.d("EKF:", "East: " + lastOpportunisticUpdate[0] + " North: " + lastOpportunisticUpdate[1] + "Timestamp: " + lastOpUpdateTime);
+                    Log.d("EKF", "last update x = "+(lastOpportunisticUpdate[0] != observe[0])+ " y = "+(lastOpportunisticUpdate[1] != observe[1]));
+                }
+                useThisMeasurement = (lastOpportunisticUpdate != null) && (lastOpportunisticUpdate[0] != observe[0] && lastOpportunisticUpdate[1] != observe[1]);
+                Log.d("EKF", "Use measurement "+useThisMeasurement);
                 lastOpportunisticUpdate = observe;
                 lastOpUpdateTime = (refTime-initialiseTime);
             }
@@ -279,8 +281,8 @@ public class ExtendedKalmanFilter{
         Log.d("EKF", "======== ON STEP DETECTED ========");
         Log.d("EKF:", "Last update time: " + lastOpUpdateTime + " current time: " + (refTime-initialiseTime));
 
-        if (lastOpportunisticUpdate != null && checkRelevance((refTime-initialiseTime))){
-            Log.d("EKF:", "Using observation update");
+        if (lastOpportunisticUpdate != null && this.useThisMeasurement && checkRelevance((refTime-initialiseTime))){
+            Log.d("EKF:", "Using observation update...");
             double distanceBetween = Math.sqrt(Math.pow(lastOpportunisticUpdate[0]-pdrEast, 2) + Math.pow(lastOpportunisticUpdate[1] - pdrNorth, 2));
             if (!outlierDetector.detectOutliers(distanceBetween)) {
                 Log.d("EKF", "No outlier detected");
@@ -302,8 +304,8 @@ public class ExtendedKalmanFilter{
 
         if ((timeDifference <= relevanceThreshold)) return true;
 
-        this.lastOpportunisticUpdate = null;
-        this.lastOpUpdateTime = 0;
+        //this.lastOpportunisticUpdate = null;
+        //this.lastOpUpdateTime = 0;
 
         return false;
     }
@@ -352,7 +354,7 @@ public class ExtendedKalmanFilter{
                 Log.d("EKF", "XK after update: "+Xk.toString());
                 Log.d("EKF", "OUTPUT: East = "+Xk.get(1, 0) + " North = "+Xk.get(2,0));
 
-                resetOpportunisticUpdate();
+                //resetOpportunisticUpdate();
                 double[] startPosition = SensorFusion.getInstance().getGNSSLatLngAlt(true);
                 double[] ecefRefCoords = SensorFusion.getInstance().getEcefRefCoords();
                 SensorFusion.getInstance().notifyFusedUpdate(

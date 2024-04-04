@@ -1142,12 +1142,12 @@ public class SensorFusion implements SensorEventListener, Observer {
         writeLineTextFile(data);
     }
 
-    public void updateFusionWifi(JSONObject wifiresponse){
+    public void updateFusionWifi(JSONObject wifiResponse){
 
         try {
             System.out.println("===== in update particle fusion ====");
 
-            if (wifiresponse == null){
+            if (wifiResponse == null){
                 this.positionWifi = null;
 
                 // display the position on UI
@@ -1156,9 +1156,9 @@ public class SensorFusion implements SensorEventListener, Observer {
                 return;
             }
 
-            double latitude = wifiresponse.getDouble("lat");
-            double longitude = wifiresponse.getDouble("lon");
-            double floor = wifiresponse.getDouble("floor");
+            double latitude = wifiResponse.getDouble("lat");
+            double longitude = wifiResponse.getDouble("lon");
+            double floor = wifiResponse.getDouble("floor");
             this.positionWifi = new LatLng(latitude, longitude);
 
             // display the position on UI

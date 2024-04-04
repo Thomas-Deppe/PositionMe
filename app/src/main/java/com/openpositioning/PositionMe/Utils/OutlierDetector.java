@@ -22,13 +22,13 @@ public class OutlierDetector {
     }
 
     public boolean detectOutliers(double newDistance) {
-
-//        if (newDistance > max_distance_threshold) {
-//            Log.d("EKF", "Outlier detected: "+newDistance);
-//            return true;
-//        }
-
         distances.add(newDistance);
+
+        if (newDistance > max_distance_threshold) {
+            Log.d("EKF", "Outlier detected: "+newDistance);
+            return true;
+        }
+
         double median = calculateMedian();
         double MAD = calculateMAD(median);
         Log.d("DETECT_OUTLIERS", "Median = "+median+" MAD = "+MAD);

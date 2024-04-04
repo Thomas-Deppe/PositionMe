@@ -535,13 +535,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                         sensorFusion.setNoCoverage(true);
                         //System.out.println("toast - no wifi coverage" + buildingManager.getCurrentBuilding());
 //                        Toast.makeText(getActivity(), "This area has no wifi coverage", Toast.LENGTH_SHORT).show();
-                    }
-                    else if (buildingManager.getCurrentBuilding().equals(Buildings.CORRIDOR_NUCLEUS)){
-                        noCoverageIcon.setVisibility(View.VISIBLE);
-                        //sensorFusion.setNoCoverage(true);
-//                        Toast.makeText(getActivity(), "This area has no wifi coverage", Toast.LENGTH_SHORT).show();
-                    }
-                    else {
+                    } else {
                         noCoverageIcon.setVisibility(View.GONE);
                         sensorFusion.setNoCoverage(false);
                         buildingManager.addGroundOverlay();

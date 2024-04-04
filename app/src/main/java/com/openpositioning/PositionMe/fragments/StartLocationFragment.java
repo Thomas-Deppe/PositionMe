@@ -209,6 +209,7 @@ public class StartLocationFragment extends Fragment implements Observer{
     }
 
     private void updateMarker(LatLng new_position) {
+        if (getActivity() == null) return;
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
