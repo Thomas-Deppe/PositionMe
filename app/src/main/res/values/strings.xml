@@ -28,6 +28,7 @@
     <string name="proximity">Proximity sensor</string>
     <string name="gnssLatLong">GNSS (Lat/Long)</string>
     <string name="gnss">GNSS</string>
+    <string name="fusion">Fusion</string>
     <string name="pdr_pos">PDR Position</string>
     <string name="pdr_short">PDR</string>
     <string name="wifi_short">WiFi</string>
