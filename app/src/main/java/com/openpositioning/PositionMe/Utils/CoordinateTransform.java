@@ -23,11 +23,12 @@ public final class CoordinateTransform {
     }
 
     /**
-     * Converts WSG84 coordinates to Earth Centred, Earth Fixed (ECEF) coordiantes.
-     * @param latitude The latitude of the coordinate to convert
-     * @param longitude The longitude of the coordinate to convert
-     * @param altitude The altitude of the coordinate to convert
-     * @return The converted ECEF coordinates as a double array with X, Y and Z coordinates
+     * Converts WSG84 coordinates to Earth-Centered, Earth-Fixed (ECEF) coordinates.
+     *
+     * @param latitude  The latitude of the coordinate to convert.
+     * @param longitude The longitude of the coordinate to convert.
+     * @param altitude  The altitude of the coordinate to convert.
+     * @return The converted ECEF coordinates as a double array with X, Y, and Z coordinates.
      */
     public static double[] geodeticToEcef(double latitude, double longitude, double altitude){
         double[] ecefCoords = new double[3];
@@ -45,7 +46,17 @@ public final class CoordinateTransform {
         return ecefCoords;
     }
 
-
+    /**
+     * Converts Earth-Centered, Earth-Fixed (ECEF) coordinates to East-North-Up (ENU) coordinates
+     * relative to a reference point specified by latitude and longitude.
+     *
+     * @param east         The east displacement in meters.
+     * @param north        The north displacement in meters.
+     * @param up           The altitude displacement in meters.
+     * @param refLatitude  The reference point latitude.
+     * @param refLongitude The reference point longitude.
+     * @return A double array containing the East, North, and Up displacements in meters.
+     */
     public static double[] ecefToENU(double east, double north, double up, double refLatitude, double refLongitude){
         double[] enuCoords = new double[3];
         double latRad = Math.toRadians(refLatitude);
@@ -61,7 +72,8 @@ public final class CoordinateTransform {
 
     /**
      * Converts ENU coordinates to ECEF coordinates from a reference point which is the users start location.
-     * The reference ECEF coordinates are calulcated from the WSG84 coordiantes.
+     * The reference ECEF coordinates are calculated from the WSG84 coordinates.
+     *
      * @param east The east displacement in meters
      * @param north The north displacement in meters
      * @param up The altitude in meters
@@ -134,7 +146,8 @@ public final class CoordinateTransform {
     }
 
     /**
-     * Converts the ENU coordiantes to WSG84 coordiantes. First the ENU coordinates have to be converted to ECEF and then they can be converted to WSG84.
+     * Converts the ENU coordiantes to WSG84 coordiantes.
+     * First the ENU coordinates have to be converted to ECEF and then they can be converted to WSG84.
      * @param east The east displacement in meters
      * @param north The north displacement in meters
      * @param up The altitude in meters
@@ -160,6 +173,18 @@ public final class CoordinateTransform {
         return ecefToGeodetic(ecefCoords);
     }
 
+    /**
+     * Converts geodetic coordinates (latitude, longitude, altitude) to East-North-Up (ENU) coordinates
+     * relative to a reference point specified by its geodetic coordinates.
+     *
+     * @param latitude      The latitude of the point to convert.
+     * @param longitude     The longitude of the point to convert.
+     * @param altitude      The altitude of the point to convert.
+     * @param refLatitude   The latitude of the reference point.
+     * @param refLongitude  The longitude of the reference point.
+     * @param refAltitude   The altitude of the reference point.
+     * @return A double array containing the East, North, and Up displacements in meters.
+     */
     public static double[] geodeticToEnu(double latitude, double longitude, double altitude, double refLatitude, double refLongitude, double refAltitude){
         double[] newPosition = geodeticToEcef(latitude, longitude, altitude);
         double[] ecefRefCoords = geodeticToEcef(refLatitude, refLongitude, refAltitude);
