@@ -460,7 +460,7 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void updateServer(Object[] responseList) {
         //update fusion processing with new wifi fingerprint
         if (saveRecording) {
-            if (responseList == null){
+            if (responseList == null || responseList[0] == null){
                 updateFusionWifi(null);
             }
             JSONObject wifiresponse = (JSONObject) responseList[0];

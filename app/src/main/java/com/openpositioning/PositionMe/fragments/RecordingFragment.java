@@ -778,6 +778,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 }
 
                 // otherwise display the new wifi point
+                noCoverageIcon.setVisibility(View.GONE);
                 wifiPosition = latlngFromWifiServer;
                 if (recording_map == null){return;}
                 updateWifiTrajectory(latlngFromWifiServer);

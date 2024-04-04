@@ -11,8 +11,9 @@ import java.util.Collections;
 import java.util.List;
 
 public class OutlierDetector {
-    private static final double outlier_threshold = 2.8;
+    private static final double outlier_threshold = 3.0;
     private static final double zScoreFactor = 0.6745;
+    private static final double max_distance_threshold = 10;
 
     List<Double> distances;
 
@@ -21,6 +22,12 @@ public class OutlierDetector {
     }
 
     public boolean detectOutliers(double newDistance) {
+
+//        if (newDistance > max_distance_threshold) {
+//            Log.d("EKF", "Outlier detected: "+newDistance);
+//            return true;
+//        }
+
         distances.add(newDistance);
         double median = calculateMedian();
         double MAD = calculateMAD(median);

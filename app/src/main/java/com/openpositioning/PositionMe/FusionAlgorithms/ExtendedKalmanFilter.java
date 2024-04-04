@@ -68,10 +68,10 @@ public class ExtendedKalmanFilter{
 
         // Process noise covariance matrix Q
         //this.Qk = SimpleMatrix.diag((sigma_dN), (sigma_dE), (sigma_ds), (sigma_dtheta*sigma_dtheta));
-        this.Qk = SimpleMatrix.diag((sigma_ds), (sigma_dTheta * sigma_dTheta));
+        this.Qk = SimpleMatrix.diag((sigma_dTheta * sigma_dTheta), (sigma_ds));
 
         // Measurement noise covariance matrix R
-        this.Rk = SimpleMatrix.diag((sigma_north_meas*sigma_north_meas), (sigma_east_meas*sigma_east_meas));
+        this.Rk = SimpleMatrix.diag((sigma_east_meas*sigma_east_meas), (sigma_north_meas*sigma_north_meas));
 
         // Hk based on the observation model (static in this case)
 //        this.Hk = new SimpleMatrix(new double[][]{
@@ -100,9 +100,9 @@ public class ExtendedKalmanFilter{
 
     private void initialiseStateVector(double initialHeading){
         this.Xk = new SimpleMatrix(new double[][]{
+                {initialHeading},
                 {0},
-                {0},
-                {initialHeading}
+                {0}
         });
     }
 
@@ -175,6 +175,7 @@ public class ExtendedKalmanFilter{
                 Log.d("EKF", "======== PREDICT ========");
                 Log.d("EKF", "Predicting... "+(Math.PI/2 - theta_k)+" "+step_k);
                 double adaptedHeading = wraptopi((Math.PI/2 - theta_k));
+                Log.d("EKF", "Adapted bearing "+ (Math.PI/2 - theta_k)+" wrapped bearing "+wraptopi((Math.PI/2 - theta_k)));
                 //double adaptedHeading = (Math.PI/2 - theta_k);
                 //double adaptedHeading = theta_k;
                 //if (isFirstPrediction){
@@ -332,7 +333,7 @@ public class ExtendedKalmanFilter{
 
         // Linear or exponential penalty factor based on elapsed time
         // Example: linear growth
-        return thetaStd *elapsedTimeMinutes;// Adjust the divisor to control the rate of increase
+        return thetaStd * elapsedTimeMinutes;// Adjust the divisor to control the rate of increase
     }
 
     public void onObservationUpdate(double observeEast, double observeNorth, double pdrEast, double pdrNorth,
@@ -413,12 +414,14 @@ public class ExtendedKalmanFilter{
     }
 
     private static double wraptopi(double x) {
-        if (x > Math.PI) {
-            x = x - (Math.floor(x / (2 * Math.PI)) + 1) * 2 * Math.PI;
-        } else if (x < -Math.PI) {
-            x = x + (Math.floor(x / (-2 * Math.PI)) + 1) * 2 * Math.PI;
+        double bearing = x;
+        bearing = bearing % (2 * Math.PI); // Normalize to range 0 to 2π
+        if (bearing < -Math.PI) {
+            bearing += 2 * Math.PI; // Adjust if bearing is less than -π
+        } else if (bearing > Math.PI) {
+            bearing -= 2 * Math.PI; // Adjust if bearing is more than π
         }
-        return x;
+        return bearing;
     }
 
     private void resetOpportunisticUpdate(){
