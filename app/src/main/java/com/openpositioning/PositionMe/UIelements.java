@@ -5,7 +5,6 @@ import android.app.Dialog;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
-import android.os.CountDownTimer;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,42 +16,44 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
-import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
-import androidx.navigation.NavDirections;
-import androidx.navigation.Navigation;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.openpositioning.PositionMe.Buildings.Buildings;
-import com.openpositioning.PositionMe.Buildings.Floors;
 import com.openpositioning.PositionMe.Utils.ConvertVectorToBitMap;
-import com.openpositioning.PositionMe.fragments.CorrectionFragment;
 import com.openpositioning.PositionMe.fragments.HomeFragment;
-import com.openpositioning.PositionMe.fragments.RecordingFragmentDirections;
 import com.openpositioning.PositionMe.fragments.RecordingFragment;
 import com.openpositioning.PositionMe.sensors.SensorFusion;
 
+/**
+ * The UIelements class instanties and modifies all the UI elements shown for the {@link RecordingFragment}
+ *
+ * The class instantiates objects for UI elements such as  buttons, ToggleButtons, Text Views, Image Views and Markers.
+ * The class provides a number of button and togglebutton listeners and display methods that are called on
+ * the instantiated UIelements object from the {@link RecordingFragment} class
+ *
+ * @author Alexandra Geciova
+ * @author Tom
+ * @author Chris
+ */
 public class UIelements {
-
 
     private GoogleMap recording_map;
     private TrajectoryDisplay wifiTrajectory, pdrTrajectory, gnssTrajectory, fusedTrajectory;
 
-
     //Zoom of google maps
     private float zoom = 19f;
+
     //Button to end PDR recording
     private Button zoomInButton, zoomOutButton, mapChangeButton, recentreButton, posTagButton;
 
@@ -79,18 +80,41 @@ public class UIelements {
     //Settings spinners that allow the user to change
     private Spinner floorSpinner;
 
-    //Stores the markers displaying the users location and GNSS position so they can be manipulated without removing and re-adding them
-    private Marker user_marker; // set to fusion
+    //Stores the markers displaying the users location - based on the fusion trajectory
+    private Marker user_marker;
 
     private LatLng currentPosition;
+
     private Context contextRecordFrag;
 
 
 
-    public UIelements(GoogleMap recording_map, LatLng startPosition, Context context) {
+    public UIelements(Context context) {
+        this.contextRecordFrag = context;
+    }
+
+    public void initialiseMapReady(GoogleMap recording_map, LatLng startPosition){
+
         this.recording_map = recording_map;
         this.currentPosition = startPosition;
-        this.contextRecordFrag = context;
+
+
+        // instantiating the polylines on the map
+        pdrTrajectory = new TrajectoryDisplay(Color.BLUE, recording_map, startPosition);
+        wifiTrajectory = new TrajectoryDisplay(Color.GREEN, recording_map, startPosition);
+        gnssTrajectory = new TrajectoryDisplay(Color.RED, recording_map, startPosition);
+        fusedTrajectory = new TrajectoryDisplay(Color.CYAN, recording_map, startPosition);
+
+        // do not display line for wifi and gnss
+        wifiTrajectory.setVisibility(false);
+        gnssTrajectory.setVisibility(false);
+
+        // user Marker current
+        user_marker = recording_map.addMarker(new MarkerOptions()
+                .position(startPosition)
+                .icon(ConvertVectorToBitMap.convert(contextRecordFrag, Color.BLACK, R.drawable.ic_baseline_navigation_24))
+                .title("User Position"));
+        recording_map.animateCamera(CameraUpdateFactory.newLatLngZoom(currentPosition, zoom));
     }
 
     public void initialiseViewCreated(@NonNull View view, Activity activity){
@@ -110,7 +134,6 @@ public class UIelements {
         this.elevation.setText(contextRecordFrag.getString(R.string.elevation, "0"));
         this.distanceTravelled.setText(contextRecordFrag.getString(R.string.distance_travelled, "0"));
         this.elevatorIcon.setVisibility(View.GONE);
-
 
         // Button for Choosing the Map Type
         this.mapChangeButton = view.findViewById(R.id.mapTypeButton);
@@ -157,7 +180,7 @@ public class UIelements {
             @Override
             public void onClick(View view) {
                 if (currentPosition != null) {
-                    SensorFusion.getInstance().addFusionTagTraj(currentPosition);
+                    SensorFusion.getInstance().addTagFusionTraj(currentPosition);
                 }
             }
         });
@@ -271,7 +294,7 @@ public class UIelements {
         displayWifiToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
 
             if (wifiTrajectory != null){
-                wifiTrajectory.setVisibility(isChecked);
+                wifiTrajectory.setVisibility(false);
                 wifiTrajectory.displayLastKDots(isChecked);
             }
         });
@@ -280,7 +303,7 @@ public class UIelements {
         displayGNSSToggle.setChecked(true);
         displayGNSSToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (gnssTrajectory != null){
-                gnssTrajectory.setVisibility(isChecked);
+                gnssTrajectory.setVisibility(false);
                 gnssTrajectory.displayLastKDots(isChecked);
             }
         });
@@ -344,29 +367,6 @@ public class UIelements {
         recordingSettingsDialog.show();
     }
 
-
-    public void initialiseMapReady(LatLng position, Context context){
-
-        // instantiating the polylines on the map
-        pdrTrajectory = new TrajectoryDisplay(Color.BLUE, recording_map, position);
-        wifiTrajectory = new TrajectoryDisplay(Color.GREEN, recording_map, position);
-        gnssTrajectory = new TrajectoryDisplay(Color.RED, recording_map, position);
-        fusedTrajectory = new TrajectoryDisplay(Color.CYAN, recording_map, position);
-
-        // do not display line for wifi and gnss
-        wifiTrajectory.setVisibility(false);
-        gnssTrajectory.setVisibility(false);
-
-        // user Marker current
-        user_marker = recording_map.addMarker(new MarkerOptions()
-                .position(position)
-                .icon(ConvertVectorToBitMap.convert(context, Color.BLACK, R.drawable.ic_baseline_navigation_24))
-                .title("User Position"));
-        recording_map.animateCamera(CameraUpdateFactory.newLatLngZoom(position, zoom));
-
-    }
-
-
     /**
     * Displays a blinking red dot to signify an ongoing recording.
     *
@@ -384,20 +384,10 @@ public class UIelements {
         recIcon.startAnimation(blinking_rec);
     }
 
-    /*
-    * structure of the code below:
-    *
-    * no coverage icon
-    * settings - recording setting dialog + floor spinner
-    * map type dialog
-    * zoom buttons
-    * recentre
-    * add tag
-    * */
-
-
-
     public void updatePositionError(float[] positionError){
+
+        if (contextRecordFrag == null){return;}
+
         errorWifi.setText(contextRecordFrag.getString(R.string.meter, String.format("%.2f", positionError[0])));
         errorGNSS.setText(contextRecordFrag.getString(R.string.meter, String.format("%.2f", positionError[1])));
         errorPDR.setText(contextRecordFrag.getString(R.string.meter, String.format("%.2f",  positionError[2])));
@@ -478,6 +468,7 @@ public class UIelements {
     /**
      * decreases the zoom and updates the Animate Camera to zoom out of the map
      **/
+    // todo set currentPosition for sure latlng
     public void setZoomOutButton(){
         zoom--;
         if (!(recording_map == null)) {
@@ -501,22 +492,16 @@ public class UIelements {
         fusedTrajectory.adjustTrajectoryToFloor(true);
     }
 
-    public void updatePositionError(double[] positionError){
-        errorWifi.setText(contextRecordFrag.getString(R.string.meter, String.format("%.2f", positionError[1])));
-        errorGNSS.setText(contextRecordFrag.getString(R.string.meter, String.format("%.2f", positionError[2])));
-        errorPDR.setText(contextRecordFrag.getString(R.string.meter, String.format("%.2f",  positionError[0])));
-    }
 
     public void displayXYDistance(float distance, double[] pdrValues){
         distanceTravelled.setText(contextRecordFrag.getString(R.string.distance_travelled, String.format("%.2f", distance)));
         positionX.setText(contextRecordFrag.getString(R.string.x, String.format("%.1f", pdrValues[0])));
         positionY.setText(contextRecordFrag.getString(R.string.y, String.format("%.1f", pdrValues[1])));
 
-
     }
 
     public void setCompassIconRotation(float rotation){
-        compassIcon.setRotation((float) Math.toDegrees(rotation));
+        compassIcon.setRotation((float) Math.toDegrees(-rotation));
     }
 
     public void setUserMarkerRotation(float rotation){

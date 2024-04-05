@@ -222,7 +222,7 @@ public class StartLocationFragment extends Fragment implements Observer{
 
     @Override
     public void updateServer(Object[] objList) {
-        if (objList == null || objList[0] == null) return;
+        if (objList[0] == null) return;
 
         JSONObject wifiResponse = (JSONObject) objList[0];
 

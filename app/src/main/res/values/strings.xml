@@ -84,9 +84,11 @@
     <string name="display_gnss">Display GNSS:  \t</string>
     <string name="display_kalman">Fusion Filter: \t</string>
     <string name="error_pdr">PDR error:\t \t</string>
-    <string name="error_wifi">Wifi error:\t \t</string>
-    <string name="error_gnss">GNSS error:</string>
-    <string name="error_title">\t Fusion Algorithm (Ground Truth) </string>
+    <string name="error_wifi">Wifi error: \t \t</string>
+    <string name="error_gnss">GNSS error: </string>
+    <string name="error_title">Fusion Algorithm (Ground Truth) </string>
+    <string name="show_error">Show Position Errors</string>
+
 
 
     <!-- Units only -->

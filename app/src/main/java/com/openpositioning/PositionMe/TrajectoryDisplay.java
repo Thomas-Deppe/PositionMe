@@ -1,6 +1,9 @@
 package com.openpositioning.PositionMe;
 
 import android.content.Context;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
@@ -8,18 +11,40 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.openpositioning.PositionMe.Utils.ConvertVectorToBitMap;
+import com.openpositioning.PositionMe.sensors.MovementSensor;
+import com.openpositioning.PositionMe.sensors.SensorFusion;
+
 import java.util.ArrayList;
 import java.util.List;
 
-
+/**
+ * The TrajectoryDisplay class defines objects that represent a trajecotry plotted on the map.
+ * It stores it formatting settings, data points and sets the desired display.
+ *
+ * The class is instantited in {@link UIelements} for each of the trajectories plotted: PDR, WIFI, GNSS, Fusion
+ * As Attributes, the class stores
+ * - the Polyline object with all the position points
+ * - an Array of last K marker (objects)
+ *
+ * The class provides a number of methods that are called on the instantiated objects from a different
+ * class to either show or hide the polyline or add points.
+ * The class includes a smoothing function that is used for plotting the polyline.
+ *
+ * @author Alexandra Geciova
+ * @author Tom
+ * @author Chris
+ */
 public class TrajectoryDisplay {
 
     private Polyline trajectory; // this shows the pdr trajectory
     private List<Marker> markersList;
     private int numberOfPointsToSmooth = 50;
+    private int numberOfMarkersDisplayed = 7;
 
 
     public TrajectoryDisplay(int color, GoogleMap recording_map, LatLng start_position) {
+
+        if (recording_map == null){return;}
 
         // instantiating the polylines on the map
         trajectory = recording_map.addPolyline(new PolylineOptions()
@@ -38,7 +63,6 @@ public class TrajectoryDisplay {
     public void displayLastKDots(boolean display) {
 
         for (Marker marker : markersList) {
-//            System.out.println("wifi here less than 3" + markers.size());
             marker.setVisible(display);
         }
     }
@@ -82,11 +106,6 @@ public class TrajectoryDisplay {
         trajectory.setVisible(true);
     }
 
-    public void resetTrajectoryPoints() {
-        // reset the points for all polylines
-        trajectory.setPoints(new ArrayList<LatLng>());
-    }
-
     // Simple smoothing for trajectory, returns a list of interpolated points between two points
     private List<LatLng> interpolate_points(LatLng lastPoint, LatLng newPoint) {
         List<LatLng> interpolatedPoints = new ArrayList<>();
@@ -128,7 +147,7 @@ public class TrajectoryDisplay {
         markersList.add(recording_map.addMarker(markerOptions.anchor(0.5f, 0.5f) .visible(false)));
 
         // if the list array is full, remove the oldest marker
-        if (markersList.size()-1 > 7){
+        if (markersList.size()-1 > numberOfMarkersDisplayed){
             markersList.get(0).setVisible(false);
             markersList.remove(0);
         }

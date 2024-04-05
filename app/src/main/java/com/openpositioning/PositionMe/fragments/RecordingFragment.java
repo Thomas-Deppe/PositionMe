@@ -1,70 +1,38 @@
 package com.openpositioning.PositionMe.fragments;
 
-import static android.provider.Settings.System.getString;
-
-import android.app.Dialog;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
-import android.provider.Contacts;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
-import android.view.animation.AlphaAnimation;
-import android.view.animation.Animation;
-import android.view.animation.LinearInterpolator;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.ProgressBar;
-import android.widget.Spinner;
-import android.widget.Switch;
-import android.widget.TextView;
-import android.widget.Toast;
-import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.NavDirections;
 import androidx.navigation.Navigation;
 import androidx.preference.PreferenceManager;
 
-import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.JointType;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.Polyline;
-import com.google.android.gms.maps.model.PolylineOptions;
 import com.openpositioning.PositionMe.Buildings.BuildingManager;
 import com.openpositioning.PositionMe.Buildings.Buildings;
-import com.openpositioning.PositionMe.TrajectoryDisplay;
 import com.openpositioning.PositionMe.UIelements;
-import com.openpositioning.PositionMe.Utils.ConvertVectorToBitMap;
 import com.openpositioning.PositionMe.Utils.CoordinateTransform;
 import com.openpositioning.PositionMe.Buildings.Floors;
 import com.openpositioning.PositionMe.R;
 import com.openpositioning.PositionMe.SensorFusionUpdates;
 import com.openpositioning.PositionMe.sensors.SensorFusion;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * A simple {@link Fragment} subclass. The recording fragment is displayed while the app is actively
@@ -76,6 +44,7 @@ import java.util.List;
  * @see SensorFusion the class containing sensors and recording.
  *
  * @author Thomas Deppe
+ * @author Alexandra Geciova
  */
 public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
@@ -91,8 +60,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     private Button cancelButton;
     //Loading bar to show time remaining before recording automatically ends
     private ProgressBar timeRemaining;
-
-    private Button recordingSettings;
 
     //App settings
     private SharedPreferences settings;
@@ -112,7 +79,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
     private double[] startPosition = new double[3];
     private double[] ecefRefCoords = new double[3];
 
-    private float[] positionError = new float[3];
+    private float[] positionError = {0,0,0};
 
     //Used to manipulate the floor plans displayed and track which building the user is in.
     private BuildingManager buildingManager;
@@ -185,6 +152,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             // set to position from StartRecording Fragment
             buildingManager = new BuildingManager(recording_map);
 
+            uiElements.initialiseMapReady(recording_map, currentPosition);
 
             //check if the user has changed floors
             checkBuildingBounds(currentPosition);
@@ -232,15 +200,14 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         }
 
         // constructor + instantiation of Map Ready
-        uiElements = new UIelements(recording_map, currentPosition, getContext());
-        uiElements.initialiseMapReady(currentPosition, getContext());
+        uiElements = new UIelements(getContext());
+        uiElements.initialiseViewCreated(view, getActivity());
+        uiElements.updatePositionError(positionError);
 
         //Reset variables to 0
         this.distance = 0f;
         this.previousPosX = 0f;
         this.previousPosY = 0f;
-
-        uiElements.initialiseViewCreated(view, getActivity());
 
         // Stop button to save trajectory and move to corrections
         this.stopButton = getView().findViewById(R.id.stopButton);
@@ -381,21 +348,15 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
                     // set the name and the floor plan
                     uiElements.setupFloorSpinner(buildingManager.getCurrentBuilding(), currentFloor, RecordingFragment.this);
-
-
                     uiElements.setCurrentBuilding(buildingManager.getCurrentBuilding().getBuildingName());
 
                     if (buildingManager.getCurrentBuilding().equals(Buildings.UNSPECIFIED)) {
                         buildingManager.removeGroundOverlay();
                         uiElements.getNoCoverageIcon().setVisibility(View.VISIBLE);
                         sensorFusion.setNoCoverage(true);
-                        //System.out.println("toast - no wifi coverage" + buildingManager.getCurrentBuilding());
-//                        Toast.makeText(getActivity(), "This area has no wifi coverage", Toast.LENGTH_SHORT).show();
                     }
                     else if (buildingManager.getCurrentBuilding().equals(Buildings.CORRIDOR_NUCLEUS)){
                         uiElements.getNoCoverageIcon().setVisibility(View.VISIBLE);
-                        //sensorFusion.setNoCoverage(true);
-//                        Toast.makeText(getActivity(), "This area has no wifi coverage", Toast.LENGTH_SHORT).show();
                     }
                     else {
                         uiElements.getNoCoverageIcon().setVisibility(View.GONE);
@@ -431,16 +392,15 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
                 // display all new x,y displament and distance
                 uiElements.displayXYDistance(distance, pdrValues);
+
                 previousPosX = pdrValues[0];
                 previousPosY = pdrValues[1];
-
 
                 //Updates the users position and path on the map
                 if (recording_map != null) {
                     //Transform the ENU coordinates to WSG84 coordinates google maps uses
                     LatLng user_step = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startPosition[0], startPosition[1], ecefRefCoords);
                     pdrPosition = user_step;
-//                    updateUserTrajectory(user_step);
 
                     // display the trajectory and the points
                     uiElements.showPDRTrajectory(pdrPosition, getContext());
@@ -486,20 +446,15 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 // display the new position as a line and points
                 if (recording_map == null){return;}
 
-                // display the trajectory and markers with the new point
-//                updateFusedTrajectory(coordinate);
-//                displayPolylineAsDots(trajectory_fused.getPoints(), Color.CYAN, fusedMarker, displayFusedToggle.isChecked());
-//                fusedTrajectory.updateTrajectory(newCoordinate, displayFusedToggle.isChecked(), true);
-//                fusedTrajectory.displayTrajectoryDots(recording_map, getContext(), Color.CYAN, displayFusedToggle.isChecked());
                 uiElements.showFusedTrajectory(newCoordinate, getContext());
 
                 currentPosition = newCoordinate;
                 // updates the marker
                 uiElements.updateCurrentPosition(newCoordinate);
 
-                //
+                // calculate the position error
                 if (uiElements.getShowPosError() != null && uiElements.getShowPosError().isChecked()){
-                    // calculate the position error
+
                     calculatePosError(newCoordinate);
                     // update the UI
                     uiElements.updatePositionError(positionError);
@@ -510,7 +465,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
     private void calculatePosError(LatLng coordinate){
         // now update the positional errors of pdr, wifi, gnss
-        // setting the positional errors --> 1st groundtruth Kalman, 2nd ground truth Particle
+
         float[] distanceBetween = new float[1];
 
         // get current GNSS reading and compare it
@@ -697,6 +652,4 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             sensorFusion.setCurrentFloor(buildingManager.convertSpinnerIndexToFloor(position));
         }
     }
-
 }
-
