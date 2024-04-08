@@ -17,6 +17,7 @@ import androidx.preference.PreferenceManager;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.openpositioning.PositionMe.FusionAlgorithms.ExtendedKalmanFilter;
+import com.openpositioning.PositionMe.FusionAlgorithms.ExtendedKalmanFilterPrev;
 import com.openpositioning.PositionMe.Utils.CoordinateTransform;
 import com.openpositioning.PositionMe.Utils.JsonConverter;
 import com.openpositioning.PositionMe.MainActivity;
@@ -169,6 +170,7 @@ public class SensorFusion implements SensorEventListener, Observer {
 
     private ParticleFilter particleFilter;
     private ExtendedKalmanFilter extendedKalmanFilter;
+    //private ExtendedKalmanFilterPrev extendedKalmanFilter;
     private TurnDetector turnDetector;
 
     //Creates a list of classes which wish to receive asynchronous updates from this class.
@@ -1216,6 +1218,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.noCoverage = true;
         if (fusionAlgorithmSelection) {
             this.extendedKalmanFilter = new ExtendedKalmanFilter();
+            //this.extendedKalmanFilter = new ExtendedKalmanFilterPrev();
         }else{
             this.particleFilter = new ParticleFilter();
         }

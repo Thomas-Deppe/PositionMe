@@ -268,7 +268,7 @@
                 <TextView
                     android:id="@+id/legend_gnss"
                     android:layout_width="70dp"
-                    android:layout_height="18dp"
+                    android:layout_height="20dp"
                     android:layout_marginTop="4dp"
                     android:layout_marginEnd="8dp"
                     android:text="@string/gnss"
@@ -280,9 +280,9 @@
                 <TextView
                     android:id="@+id/legend_fused"
                     android:layout_width="70dp"
-                    android:layout_height="18dp"
+                    android:layout_height="20dp"
                     android:layout_marginEnd="8dp"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="0dp"
                     android:text="@string/fusion"
                     android:textColor="@color/LightYellow"
                     android:textSize="16sp"

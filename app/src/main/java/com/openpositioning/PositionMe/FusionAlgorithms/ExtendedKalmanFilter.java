@@ -282,11 +282,10 @@ public class ExtendedKalmanFilter{
         Log.d("EKF:", "Last update time: " + lastOpUpdateTime + " current time: " + (refTime-initialiseTime));
 
         if (lastOpportunisticUpdate != null && this.useThisMeasurement && checkRelevance((refTime-initialiseTime))){
-            Log.d("EKF:", "Using observation update...");
             double distanceBetween = Math.sqrt(Math.pow(lastOpportunisticUpdate[0]-pdrEast, 2) + Math.pow(lastOpportunisticUpdate[1] - pdrNorth, 2));
             if (!outlierDetector.detectOutliers(distanceBetween)) {
                 Log.d("EKF", "No outlier detected");
-
+                Log.d("EKF:", "Using observation update...");
                 onObservationUpdate(lastOpportunisticUpdate[0], lastOpportunisticUpdate[1], pdrEast, pdrNorth, theta_k, altitude, calculateTimePenalty((refTime-initialiseTime)));
                 return;
             }
@@ -348,7 +347,7 @@ public class ExtendedKalmanFilter{
 
                 Log.d("EKF", "Observed... X = "+observeEast+" Y = "+observeNorth);
                 Log.d("EKF", "PDR... X = "+pdrEast+" Y = "+pdrNorth);
-                double[] observation = new double[] {(observeEast - pdrEast), (observeNorth - pdrNorth)};
+                double[] observation = new double[] {(pdrEast - observeEast), (pdrNorth - observeNorth)};
 
                 update(observation, theta_k, penaltyFactor);
                 Log.d("EKF", "XK after update: "+Xk.toString());
@@ -382,7 +381,7 @@ public class ExtendedKalmanFilter{
                 Log.d("EKF:", "Predicted ... East = "+predictedEast+" North = "+predictedNorth);
                 Log.d("EKF:", "Observation... East = "+(predictedEast - pdrEast)+" North = "+(predictedNorth - pdrNorth));
               
-                double[] observation = new double[] {(predictedEast - pdrEast), (predictedNorth - pdrNorth)};
+                double[] observation = new double[] {(pdrEast - predictedEast), (pdrNorth-predictedNorth)};
                 update(observation, theta_k, penaltyFactor);
                 Log.d("EKF:", "Recursive correction output... East = "+Xk.get(1, 0)+" North = "+Xk.get(2,0));
 
@@ -433,6 +432,7 @@ public class ExtendedKalmanFilter{
         Log.d("EKF:", "Last update time: " + lastOpUpdateTime);
 
     }
+
     public void setUsingWifi(boolean update) {
         if (this.stopEKF) return;
         ekfHandler.post(new Runnable() {
