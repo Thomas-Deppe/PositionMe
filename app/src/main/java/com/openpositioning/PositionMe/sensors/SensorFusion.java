@@ -27,6 +27,7 @@ import com.openpositioning.PositionMe.PdrProcessing;
 import com.openpositioning.PositionMe.SensorFusionUpdates;
 import com.openpositioning.PositionMe.ServerCommunications;
 import com.openpositioning.PositionMe.Traj;
+import com.openpositioning.PositionMe.Utils.LowPassFilter;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -204,7 +205,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.magneticField = new float[3];
         this.angularVelocity = new float[3];
         this.orientation = new float[3];
-        this.rotation = new float[4];
+        this.rotation = new float[5];
         this.rotation[3] = 1.0f;
         this.R = new float[9];
         // GNSS initial Long-Lat array
@@ -364,7 +365,7 @@ public class SensorFusion implements SensorEventListener, Observer {
 
             case Sensor.TYPE_ROTATION_VECTOR:
                 // Save values
-                this.rotation = sensorEvent.values.clone();
+                this.rotation = LowPassFilter.applyFilter(sensorEvent.values.clone(), this.rotation);
                 float[] rotationVectorDCM = new float[9];
                 SensorManager.getRotationMatrixFromVector(rotationVectorDCM,this.rotation);
                 SensorManager.getOrientation(rotationVectorDCM, this.orientation);
