@@ -440,7 +440,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         }
     }
 
-    public void addFusionTagTraj(LatLng fusion_position){
+    public void addTagFusionTraj(LatLng fusion_position){
         if(saveRecording) {
             trajectory.addGnssData(Traj.GNSS_Sample.newBuilder()
                     .setAltitude(getElevation())
