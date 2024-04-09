@@ -5,6 +5,7 @@ import android.os.HandlerThread;
 import android.util.Log;
 
 import com.openpositioning.PositionMe.Utils.CoordinateTransform;
+import com.openpositioning.PositionMe.Utils.ExponentialSmoothingFilter;
 import com.openpositioning.PositionMe.Utils.OutlierDetector;
 import com.openpositioning.PositionMe.sensors.SensorFusion;
 import com.openpositioning.PositionMe.sensors.TurnDetector;
@@ -49,11 +50,14 @@ public class ExtendedKalmanFilter{
     private HandlerThread ekfThread;
     private Handler ekfHandler;
     private OutlierDetector outlierDetector;
+    private ExponentialSmoothingFilter smoothingFilter;
+    private ExponentialSmoothingFilter smoothingFilterNorth;
 
     public ExtendedKalmanFilter() {
 
         Log.d("EKF", "====== INITIALISING EKF ======");
         this.outlierDetector = new OutlierDetector();
+        this.smoothingFilter = new ExponentialSmoothingFilter(0.5, 2);
 
         this.stopEKF = false;
 
@@ -239,6 +243,7 @@ public class ExtendedKalmanFilter{
         Log.d("EKF", "RK = " +Rk.toString());
 
         SimpleMatrix y_pred = Zk.minus(Hk.mult(Xk));
+
         SimpleMatrix Sk = Hk.mult(Pk).mult(Hk.transpose()).plus(Mk.mult(Rk).mult(Mk.transpose()));
         SimpleMatrix KalmanGain = Pk.mult(Hk.transpose().mult(Sk.invert()));
 
@@ -356,8 +361,9 @@ public class ExtendedKalmanFilter{
                 //resetOpportunisticUpdate();
                 double[] startPosition = SensorFusion.getInstance().getGNSSLatLngAlt(true);
                 double[] ecefRefCoords = SensorFusion.getInstance().getEcefRefCoords();
+                double[] smoothedCoords = smoothingFilter.applySmoothing(new double[]{Xk.get(1, 0), Xk.get(2,0)});
                 SensorFusion.getInstance().notifyFusedUpdate(
-                        CoordinateTransform.enuToGeodetic(Xk.get(1, 0), Xk.get(2,0),
+                        CoordinateTransform.enuToGeodetic(smoothedCoords[0], smoothedCoords[1],
                                 altitude,
                                 startPosition[0], startPosition[1], ecefRefCoords)
                 );
@@ -387,8 +393,9 @@ public class ExtendedKalmanFilter{
 
                 double[] startPosition = SensorFusion.getInstance().getGNSSLatLngAlt(true);
                 double[] ecefRefCoords = SensorFusion.getInstance().getEcefRefCoords();
+                double[] smoothedCoords = smoothingFilter.applySmoothing(new double[]{Xk.get(1, 0), Xk.get(2,0)});
                 SensorFusion.getInstance().notifyFusedUpdate(
-                        CoordinateTransform.enuToGeodetic(Xk.get(1, 0), Xk.get(2,0),
+                        CoordinateTransform.enuToGeodetic(smoothedCoords[0], smoothedCoords[1],
                                 altitude,
                                 startPosition[0], startPosition[1], ecefRefCoords)
                 );
@@ -447,6 +454,8 @@ public class ExtendedKalmanFilter{
     public void stopFusion(){
         this.stopEKF = true;
         Log.d("EKF:", "Stopping EKF handler");
+        this.smoothingFilter.reset();
+        this.smoothingFilterNorth.reset();
         ekfThread.quitSafely();
     }
 }
