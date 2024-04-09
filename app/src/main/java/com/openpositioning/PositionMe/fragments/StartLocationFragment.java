@@ -143,6 +143,7 @@ public class StartLocationFragment extends Fragment implements Observer{
                 Log.d("MARKER LOCATION", startRef[0] + " " + startRef[1]);
                 user_marker = start_map.addMarker(new MarkerOptions()
                         .position(position)
+                        .draggable(true)
                         .title("User Position"));
                 start_map.animateCamera(CameraUpdateFactory.newLatLngZoom(position, zoom));
 
@@ -166,6 +167,7 @@ public class StartLocationFragment extends Fragment implements Observer{
                         startPosition[1] = (float) marker.getPosition().longitude;
                         startRef[0] = marker.getPosition().latitude;
                         startRef[1] = marker.getPosition().longitude;
+                        updateMarker(new LatLng(startRef[0], startRef[1]));
 
                     }
 
@@ -207,6 +209,7 @@ public class StartLocationFragment extends Fragment implements Observer{
     }
 
     private void updateMarker(LatLng new_position) {
+        if (getActivity() == null) return;
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -222,7 +225,7 @@ public class StartLocationFragment extends Fragment implements Observer{
 
     @Override
     public void updateServer(Object[] objList) {
-        if (objList[0] == null) return;
+        if (objList == null || objList[0] == null) return;
 
         JSONObject wifiResponse = (JSONObject) objList[0];
 

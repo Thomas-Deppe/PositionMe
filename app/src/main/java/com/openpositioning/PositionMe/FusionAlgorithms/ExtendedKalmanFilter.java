@@ -5,6 +5,7 @@ import android.os.HandlerThread;
 import android.util.Log;
 
 import com.openpositioning.PositionMe.Utils.CoordinateTransform;
+import com.openpositioning.PositionMe.Utils.ExponentialSmoothingFilter;
 import com.openpositioning.PositionMe.Utils.OutlierDetector;
 import com.openpositioning.PositionMe.sensors.SensorFusion;
 import com.openpositioning.PositionMe.sensors.TurnDetector;
@@ -43,16 +44,20 @@ public class ExtendedKalmanFilter{
     private long initialiseTime;
     private boolean usingWifi;
     private boolean stopEKF;
+    private boolean useThisMeasurement;
     private double prevStepLength;
 
     private HandlerThread ekfThread;
     private Handler ekfHandler;
     private OutlierDetector outlierDetector;
+    private ExponentialSmoothingFilter smoothingFilter;
+    private ExponentialSmoothingFilter smoothingFilterNorth;
 
     public ExtendedKalmanFilter() {
 
         Log.d("EKF", "====== INITIALISING EKF ======");
         this.outlierDetector = new OutlierDetector();
+        this.smoothingFilter = new ExponentialSmoothingFilter(0.5, 2);
 
         this.stopEKF = false;
 
@@ -68,10 +73,10 @@ public class ExtendedKalmanFilter{
 
         // Process noise covariance matrix Q
         //this.Qk = SimpleMatrix.diag((sigma_dN), (sigma_dE), (sigma_ds), (sigma_dtheta*sigma_dtheta));
-        this.Qk = SimpleMatrix.diag((sigma_ds), (sigma_dTheta * sigma_dTheta));
+        this.Qk = SimpleMatrix.diag((sigma_dTheta * sigma_dTheta), (sigma_ds));
 
         // Measurement noise covariance matrix R
-        this.Rk = SimpleMatrix.diag((sigma_north_meas*sigma_north_meas), (sigma_east_meas*sigma_east_meas));
+        this.Rk = SimpleMatrix.diag((sigma_east_meas*sigma_east_meas), (sigma_north_meas*sigma_north_meas));
 
         // Hk based on the observation model (static in this case)
 //        this.Hk = new SimpleMatrix(new double[][]{
@@ -100,9 +105,9 @@ public class ExtendedKalmanFilter{
 
     private void initialiseStateVector(double initialHeading){
         this.Xk = new SimpleMatrix(new double[][]{
+                {initialHeading},
                 {0},
-                {0},
-                {initialHeading}
+                {0}
         });
     }
 
@@ -175,6 +180,7 @@ public class ExtendedKalmanFilter{
                 Log.d("EKF", "======== PREDICT ========");
                 Log.d("EKF", "Predicting... "+(Math.PI/2 - theta_k)+" "+step_k);
                 double adaptedHeading = wraptopi((Math.PI/2 - theta_k));
+                Log.d("EKF", "Adapted bearing "+ (Math.PI/2 - theta_k)+" wrapped bearing "+wraptopi((Math.PI/2 - theta_k)));
                 //double adaptedHeading = (Math.PI/2 - theta_k);
                 //double adaptedHeading = theta_k;
                 //if (isFirstPrediction){
@@ -237,6 +243,7 @@ public class ExtendedKalmanFilter{
         Log.d("EKF", "RK = " +Rk.toString());
 
         SimpleMatrix y_pred = Zk.minus(Hk.mult(Xk));
+
         SimpleMatrix Sk = Hk.mult(Pk).mult(Hk.transpose()).plus(Mk.mult(Rk).mult(Mk.transpose()));
         SimpleMatrix KalmanGain = Pk.mult(Hk.transpose().mult(Sk.invert()));
 
@@ -260,13 +267,14 @@ public class ExtendedKalmanFilter{
         ekfHandler.post(new Runnable() {
             @Override
             public void run() {
-                Log.d("EKF:", "Opportunistic update...");
+                Log.d("EKF:", "======= Opportunistic update... =======");
                 Log.d("EKF:", "East: "+observe[0]+ " North: "+ observe[1] + "Timestamp: " + (refTime-initialiseTime));
-                //double predictedEast= Xk.get(1, 0);
-                //double predictedNorth = Xk.get(0,0);
-                //double distanceBetween = Math.sqrt(Math.pow(observe[0]-predictedEast, 2) + Math.pow(observe[1] - predictedNorth, 2));
-                //Log.d("EKF:", "Distance between " + distanceBetween);
-
+                if (lastOpportunisticUpdate != null) {
+                    Log.d("EKF:", "East: " + lastOpportunisticUpdate[0] + " North: " + lastOpportunisticUpdate[1] + "Timestamp: " + lastOpUpdateTime);
+                    Log.d("EKF", "last update x = "+(lastOpportunisticUpdate[0] != observe[0])+ " y = "+(lastOpportunisticUpdate[1] != observe[1]));
+                }
+                useThisMeasurement = (lastOpportunisticUpdate != null) && (lastOpportunisticUpdate[0] != observe[0] && lastOpportunisticUpdate[1] != observe[1]);
+                Log.d("EKF", "Use measurement "+useThisMeasurement);
                 lastOpportunisticUpdate = observe;
                 lastOpUpdateTime = (refTime-initialiseTime);
             }
@@ -278,12 +286,11 @@ public class ExtendedKalmanFilter{
         Log.d("EKF", "======== ON STEP DETECTED ========");
         Log.d("EKF:", "Last update time: " + lastOpUpdateTime + " current time: " + (refTime-initialiseTime));
 
-        if (lastOpportunisticUpdate != null && checkRelevance((refTime-initialiseTime))){
-            Log.d("EKF:", "Using observation update");
+        if (lastOpportunisticUpdate != null && this.useThisMeasurement && checkRelevance((refTime-initialiseTime))){
             double distanceBetween = Math.sqrt(Math.pow(lastOpportunisticUpdate[0]-pdrEast, 2) + Math.pow(lastOpportunisticUpdate[1] - pdrNorth, 2));
             if (!outlierDetector.detectOutliers(distanceBetween)) {
                 Log.d("EKF", "No outlier detected");
-
+                Log.d("EKF:", "Using observation update...");
                 onObservationUpdate(lastOpportunisticUpdate[0], lastOpportunisticUpdate[1], pdrEast, pdrNorth, theta_k, altitude, calculateTimePenalty((refTime-initialiseTime)));
                 return;
             }
@@ -301,8 +308,8 @@ public class ExtendedKalmanFilter{
 
         if ((timeDifference <= relevanceThreshold)) return true;
 
-        this.lastOpportunisticUpdate = null;
-        this.lastOpUpdateTime = 0;
+        //this.lastOpportunisticUpdate = null;
+        //this.lastOpUpdateTime = 0;
 
         return false;
     }
@@ -332,7 +339,7 @@ public class ExtendedKalmanFilter{
 
         // Linear or exponential penalty factor based on elapsed time
         // Example: linear growth
-        return thetaStd *elapsedTimeMinutes;// Adjust the divisor to control the rate of increase
+        return thetaStd * elapsedTimeMinutes;// Adjust the divisor to control the rate of increase
     }
 
     public void onObservationUpdate(double observeEast, double observeNorth, double pdrEast, double pdrNorth,
@@ -345,17 +352,18 @@ public class ExtendedKalmanFilter{
 
                 Log.d("EKF", "Observed... X = "+observeEast+" Y = "+observeNorth);
                 Log.d("EKF", "PDR... X = "+pdrEast+" Y = "+pdrNorth);
-                double[] observation = new double[] {(observeEast - pdrEast), (observeNorth - pdrNorth)};
+                double[] observation = new double[] {(pdrEast - observeEast), (pdrNorth - observeNorth)};
 
                 update(observation, theta_k, penaltyFactor);
                 Log.d("EKF", "XK after update: "+Xk.toString());
                 Log.d("EKF", "OUTPUT: East = "+Xk.get(1, 0) + " North = "+Xk.get(2,0));
 
-                resetOpportunisticUpdate();
+                //resetOpportunisticUpdate();
                 double[] startPosition = SensorFusion.getInstance().getGNSSLatLngAlt(true);
                 double[] ecefRefCoords = SensorFusion.getInstance().getEcefRefCoords();
+                double[] smoothedCoords = smoothingFilter.applySmoothing(new double[]{Xk.get(1, 0), Xk.get(2,0)});
                 SensorFusion.getInstance().notifyFusedUpdate(
-                        CoordinateTransform.enuToGeodetic(Xk.get(1, 0), Xk.get(2,0),
+                        CoordinateTransform.enuToGeodetic(smoothedCoords[0], smoothedCoords[1],
                                 altitude,
                                 startPosition[0], startPosition[1], ecefRefCoords)
                 );
@@ -379,14 +387,15 @@ public class ExtendedKalmanFilter{
                 Log.d("EKF:", "Predicted ... East = "+predictedEast+" North = "+predictedNorth);
                 Log.d("EKF:", "Observation... East = "+(predictedEast - pdrEast)+" North = "+(predictedNorth - pdrNorth));
               
-                double[] observation = new double[] {(predictedEast - pdrEast), (predictedNorth - pdrNorth)};
+                double[] observation = new double[] {(pdrEast - predictedEast), (pdrNorth-predictedNorth)};
                 update(observation, theta_k, penaltyFactor);
                 Log.d("EKF:", "Recursive correction output... East = "+Xk.get(1, 0)+" North = "+Xk.get(2,0));
 
                 double[] startPosition = SensorFusion.getInstance().getGNSSLatLngAlt(true);
                 double[] ecefRefCoords = SensorFusion.getInstance().getEcefRefCoords();
+                double[] smoothedCoords = smoothingFilter.applySmoothing(new double[]{Xk.get(1, 0), Xk.get(2,0)});
                 SensorFusion.getInstance().notifyFusedUpdate(
-                        CoordinateTransform.enuToGeodetic(Xk.get(1, 0), Xk.get(2,0),
+                        CoordinateTransform.enuToGeodetic(smoothedCoords[0], smoothedCoords[1],
                                 altitude,
                                 startPosition[0], startPosition[1], ecefRefCoords)
                 );
@@ -413,12 +422,14 @@ public class ExtendedKalmanFilter{
     }
 
     private static double wraptopi(double x) {
-        if (x > Math.PI) {
-            x = x - (Math.floor(x / (2 * Math.PI)) + 1) * 2 * Math.PI;
-        } else if (x < -Math.PI) {
-            x = x + (Math.floor(x / (-2 * Math.PI)) + 1) * 2 * Math.PI;
+        double bearing = x;
+        bearing = bearing % (2 * Math.PI); // Normalize to range 0 to 2π
+        if (bearing < -Math.PI) {
+            bearing += 2 * Math.PI; // Adjust if bearing is less than -π
+        } else if (bearing > Math.PI) {
+            bearing -= 2 * Math.PI; // Adjust if bearing is more than π
         }
-        return x;
+        return bearing;
     }
 
     private void resetOpportunisticUpdate(){
@@ -428,6 +439,7 @@ public class ExtendedKalmanFilter{
         Log.d("EKF:", "Last update time: " + lastOpUpdateTime);
 
     }
+
     public void setUsingWifi(boolean update) {
         if (this.stopEKF) return;
         ekfHandler.post(new Runnable() {
@@ -442,6 +454,8 @@ public class ExtendedKalmanFilter{
     public void stopFusion(){
         this.stopEKF = true;
         Log.d("EKF:", "Stopping EKF handler");
+        this.smoothingFilter.reset();
+        this.smoothingFilterNorth.reset();
         ekfThread.quitSafely();
     }
 }

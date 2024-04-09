@@ -17,6 +17,7 @@ import androidx.preference.PreferenceManager;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.openpositioning.PositionMe.FusionAlgorithms.ExtendedKalmanFilter;
+import com.openpositioning.PositionMe.FusionAlgorithms.ExtendedKalmanFilterPrev;
 import com.openpositioning.PositionMe.Utils.CoordinateTransform;
 import com.openpositioning.PositionMe.Utils.JsonConverter;
 import com.openpositioning.PositionMe.MainActivity;
@@ -26,6 +27,7 @@ import com.openpositioning.PositionMe.PdrProcessing;
 import com.openpositioning.PositionMe.SensorFusionUpdates;
 import com.openpositioning.PositionMe.ServerCommunications;
 import com.openpositioning.PositionMe.Traj;
+import com.openpositioning.PositionMe.Utils.LowPassFilter;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -169,6 +171,7 @@ public class SensorFusion implements SensorEventListener, Observer {
 
     private ParticleFilter particleFilter;
     private ExtendedKalmanFilter extendedKalmanFilter;
+    //private ExtendedKalmanFilterPrev extendedKalmanFilter;
     private TurnDetector turnDetector;
 
     //Creates a list of classes which wish to receive asynchronous updates from this class.
@@ -202,7 +205,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.magneticField = new float[3];
         this.angularVelocity = new float[3];
         this.orientation = new float[3];
-        this.rotation = new float[4];
+        this.rotation = new float[5];
         this.rotation[3] = 1.0f;
         this.R = new float[9];
         // GNSS initial Long-Lat array
@@ -362,7 +365,7 @@ public class SensorFusion implements SensorEventListener, Observer {
 
             case Sensor.TYPE_ROTATION_VECTOR:
                 // Save values
-                this.rotation = sensorEvent.values.clone();
+                this.rotation = LowPassFilter.applyFilter(sensorEvent.values.clone(), this.rotation);
                 float[] rotationVectorDCM = new float[9];
                 SensorManager.getRotationMatrixFromVector(rotationVectorDCM,this.rotation);
                 SensorManager.getOrientation(rotationVectorDCM, this.orientation);
@@ -460,7 +463,7 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void updateServer(Object[] responseList) {
         //update fusion processing with new wifi fingerprint
         if (saveRecording) {
-            if (responseList == null){
+            if (responseList == null || responseList[0] == null){
                 updateFusionWifi(null);
             }
             JSONObject wifiresponse = (JSONObject) responseList[0];
@@ -945,7 +948,6 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void startRecording() {
         // Acquire wakelock so the phone will record with a locked screen. Timeout after 31 minutes.
         this.wakeLock.acquire(31*60*1000L /*31 minutes*/);
-        initiateTextFile();
         this.saveRecording = true;
         this.stepCounter = 0;
         this.absoluteStartTime = System.currentTimeMillis();
@@ -1143,12 +1145,12 @@ public class SensorFusion implements SensorEventListener, Observer {
         writeLineTextFile(data);
     }
 
-    public void updateFusionWifi(JSONObject wifiresponse){
+    public void updateFusionWifi(JSONObject wifiResponse){
 
         try {
             System.out.println("===== in update particle fusion ====");
 
-            if (wifiresponse == null){
+            if (wifiResponse == null){
                 this.positionWifi = null;
 
                 // display the position on UI
@@ -1157,9 +1159,9 @@ public class SensorFusion implements SensorEventListener, Observer {
                 return;
             }
 
-            double latitude = wifiresponse.getDouble("lat");
-            double longitude = wifiresponse.getDouble("lon");
-            double floor = wifiresponse.getDouble("floor");
+            double latitude = wifiResponse.getDouble("lat");
+            double longitude = wifiResponse.getDouble("lon");
+            double floor = wifiResponse.getDouble("floor");
             this.positionWifi = new LatLng(latitude, longitude);
 
             // display the position on UI
@@ -1217,6 +1219,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.noCoverage = true;
         if (fusionAlgorithmSelection) {
             this.extendedKalmanFilter = new ExtendedKalmanFilter();
+            //this.extendedKalmanFilter = new ExtendedKalmanFilterPrev();
         }else{
             this.particleFilter = new ParticleFilter();
         }

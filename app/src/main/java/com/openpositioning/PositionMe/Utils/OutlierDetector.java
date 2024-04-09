@@ -11,9 +11,10 @@ import java.util.List;
  */
 public class OutlierDetector {
     // Threshold for outlier detection
-    private static final double OUTLIER_THRESHOLD = 2.8;
+    private static final double OUTLIER_THRESHOLD = 3.0;
     // Factor for computing modified Z-score
     private static final double Z_SCORE_FACTOR = 0.6745;
+    private static final double max_distance_threshold = 10;
     // List to store distances
     private final List<Double> distances;
 
@@ -33,6 +34,11 @@ public class OutlierDetector {
     public boolean detectOutliers(double newDistance) {
         // Add the new distance to the list
         distances.add(newDistance);
+
+        if (newDistance > max_distance_threshold) {
+            Log.d("EKF", "Outlier detected: "+newDistance);
+            return true;
+        }
 
         // Calculate the median of distances
         double median = calculateMedian();

@@ -3,8 +3,8 @@ package com.openpositioning.PositionMe.sensors;
 import android.util.Log;
 
 public class TurnDetector {
-    private static final float TURN_THRESHOLD = 1.6f;
-    private static final float PSEUDO_TURN = 0.8f;
+    private static final float TURN_THRESHOLD = 1.2f;
+    private static final float PSEUDO_TURN = 0.6f;
     private float orientationPrev;
     private boolean startMonitoring;
     private MovementType userMovement;
@@ -25,6 +25,7 @@ public class TurnDetector {
          * @return The updated type, or the current type if no update should be made according to the rules.
          */
         public MovementType compareAndUpdate(MovementType newType) {
+            Log.d("TURN_DETECTOR", "Updating "+this.toString() + " to "+newType.toString());
             if (this == TURN) {
                 // If the current type is TURN, it remains unchanged.
                 return this;
@@ -60,23 +61,23 @@ public class TurnDetector {
 
         if (azimuthChange > TURN_THRESHOLD){
             Log.d("TURN_DETECTOR", "Motion: TURN " + azimuthChange);
-            userMovement.compareAndUpdate(MovementType.TURN);
+            userMovement = userMovement.compareAndUpdate(MovementType.TURN);
         } else if (azimuthChange > PSEUDO_TURN){
             Log.d("TURN_DETECTOR", "Motion: PSEUDO " + azimuthChange);
-            userMovement.compareAndUpdate(MovementType.PSEUDO_TURN);
-        } else {
+            userMovement = userMovement.compareAndUpdate(MovementType.PSEUDO_TURN);
+        } else if (azimuthChange < PSEUDO_TURN){
             Log.d("TURN_DETECTOR", "Motion: STRAIGHT" + azimuthChange);
-            userMovement.compareAndUpdate(MovementType.STRAIGHT);
+            userMovement = userMovement.compareAndUpdate(MovementType.STRAIGHT);
         }
 
         orientationPrev = azimuthInDegrees;
     }
 
     public MovementType onStepDetected(float orientation){
+        ProcessOrientationData(orientation);
         MovementType resultForStep = this.userMovement;
-        this.orientationPrev = orientation;
+        Log.d("EKF", "OUTPUT from turn detector "+userMovement.toString());
         this.userMovement = MovementType.STRAIGHT;
-
         return resultForStep;
     }
 
