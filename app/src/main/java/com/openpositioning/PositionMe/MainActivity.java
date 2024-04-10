@@ -2,6 +2,7 @@ package com.openpositioning.PositionMe;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -13,6 +14,7 @@ import android.os.Handler;
 import android.provider.Settings;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.WindowManager;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -534,6 +536,8 @@ public class MainActivity extends AppCompatActivity implements Observer {
         this.serverCommunications.registerObserver(this);
         this.sensorFusion = SensorFusion.getInstance();
         this.sensorFusion.setContext(getApplicationContext());
+        WindowManager windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+        this.sensorFusion.setCurrentWindowManager(windowManager);
         //sensorFusion.registerForServerUpdate(this);
     }
 

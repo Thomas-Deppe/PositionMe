@@ -17,12 +17,16 @@ public class ExtendedKalmanFilter{
 
     private final static long relevanceThreshold = 5000;
     private final static double stepPercentageError = 0.1;
-    private final static double stepMisdirection = 0.05;
+    private final static double stepMisdirection = 0.2;
     private final static double defaultStepLength = 0.7;
-    private final static long maxElapsedTimeForMaxPenalty = 3000; // Example: 3000 milliseconds for max penalty
-    private static double sigma_dTheta = Math.toRadians(15); // Standard deviation for dθ process noise in radians
-    private static double sigma_dPseudo = Math.toRadians(8);
-    private static double sigma_dStraight = Math.toRadians(2);
+    private final static long maxElapsedTimeForMaxPenalty = 6000; // Example: 2000 milliseconds for max penalty
+    private final static long maxElapsedTimeForBearingPenalty = 15; // Example: 2000 milliseconds for max penalty
+    private final static double penaltyRatePerMinute = 1.5; // 50% increase per minute
+    private final static double maxBearingPenalty = Math.toRadians(22.5);
+    private final static double sigma_dTheta = Math.toRadians(15); // Standard deviation for dθ process noise in radians
+    private final static double sigma_dPseudo = Math.toRadians(8);
+    private final static double sigma_dStraight = Math.toRadians(2);
+    private final static double smoothingFactor = 0.35;
 
     // Example standard deviations for process and measurement noise
     private double sigma_ds = 1; // variance for ds process noise
@@ -51,20 +55,18 @@ public class ExtendedKalmanFilter{
     private Handler ekfHandler;
     private OutlierDetector outlierDetector;
     private ExponentialSmoothingFilter smoothingFilter;
-    private ExponentialSmoothingFilter smoothingFilterNorth;
 
     public ExtendedKalmanFilter() {
 
         Log.d("EKF", "====== INITIALISING EKF ======");
         this.outlierDetector = new OutlierDetector();
-        this.smoothingFilter = new ExponentialSmoothingFilter(0.5, 2);
+        this.smoothingFilter = new ExponentialSmoothingFilter(smoothingFactor, 2);
 
         this.stopEKF = false;
 
         this.Xk = new SimpleMatrix(new double[][]{
                 {0},
                 {0},
-                //{defaultStepLength},
                 {0}
         });
         // Initial covariance matrix
@@ -140,7 +142,7 @@ public class ExtendedKalmanFilter{
 
         double bearing_error = calculateBearingPenalty(thetaStd, refTime);
 
-        Log.d("EKF:", "update Qk... step_error = "+step_error+ " bearing_penalty = "+bearing_error +" Penalty = "+penaltyFactor+" bearing penalty = "+calculateBearingPenalty(thetaStd, (refTime-initialiseTime)));
+        Log.d("EKF:", "update Qk... step_error = "+step_error+ " bearing_penalty = "+bearing_error +" Penalty = "+penaltyFactor);
 
         //this.Qk.set(0, 0, north_error*north_error);
         //this.Qk.set(1, 1, east_error*east_error);
@@ -283,22 +285,28 @@ public class ExtendedKalmanFilter{
 
     public void onStepDetected(double pdrEast, double pdrNorth, double altitude, double theta_k, double stepLength, long refTime){
         if (stopEKF) return;
-        Log.d("EKF", "======== ON STEP DETECTED ========");
-        Log.d("EKF:", "Last update time: " + lastOpUpdateTime + " current time: " + (refTime-initialiseTime));
+        ekfHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                Log.d("EKF", "======== ON STEP DETECTED ========");
+                Log.d("EKF:", "Last update time: " + lastOpUpdateTime + " current time: " + (refTime-initialiseTime));
 
-        if (lastOpportunisticUpdate != null && this.useThisMeasurement && checkRelevance((refTime-initialiseTime))){
-            double distanceBetween = Math.sqrt(Math.pow(lastOpportunisticUpdate[0]-pdrEast, 2) + Math.pow(lastOpportunisticUpdate[1] - pdrNorth, 2));
-            if (!outlierDetector.detectOutliers(distanceBetween)) {
-                Log.d("EKF", "No outlier detected");
-                Log.d("EKF:", "Using observation update...");
-                onObservationUpdate(lastOpportunisticUpdate[0], lastOpportunisticUpdate[1], pdrEast, pdrNorth, theta_k, altitude, calculateTimePenalty((refTime-initialiseTime)));
-                return;
+                if (lastOpportunisticUpdate != null && useThisMeasurement && checkRelevance((refTime-initialiseTime))){
+                    double distanceBetween = Math.sqrt(Math.pow(lastOpportunisticUpdate[0]-pdrEast, 2) + Math.pow(lastOpportunisticUpdate[1] - pdrNorth, 2));
+                    if (!outlierDetector.detectOutliers(distanceBetween)) {
+                        Log.d("EKF", "No outlier detected");
+                        Log.d("EKF:", "Using observation update...");
+                        onObservationUpdate(lastOpportunisticUpdate[0], lastOpportunisticUpdate[1], pdrEast, pdrNorth, theta_k, altitude, 1);
+                        useThisMeasurement = false;
+                        return;
+                    }
+                }
+                Log.d("EKF:", "Performing recursive correction");
+
+                performRecursiveCorrection(pdrEast, pdrNorth, theta_k, altitude, calculateTimePenalty((refTime-initialiseTime)));
+                Log.d("EKF", "======== FINISHED ON STEP DETECTED ========");
             }
-        }
-        Log.d("EKF:", "Performing recursive correction");
-
-        performRecursiveCorrection(pdrEast, pdrNorth, theta_k, altitude, calculateTimePenalty((refTime-initialiseTime)));
-        Log.d("EKF", "======== FINISHED ON STEP DETECTED ========");
+        });
     }
 
     private boolean checkRelevance(long refTime){
@@ -325,7 +333,7 @@ public class ExtendedKalmanFilter{
 
         // Calculate the penalty factor with a range from 1 to 4
         // It linearly increases based on elapsedTime, capped at maxElapsedTimeForMaxPenalty
-        double penaltyFactor = 1.0 + 3.0 * Math.min(elapsedTime, maxElapsedTimeForMaxPenalty) / maxElapsedTimeForMaxPenalty;
+        double penaltyFactor = 1.0 + 0.5 * Math.min(elapsedTime, maxElapsedTimeForMaxPenalty) / maxElapsedTimeForMaxPenalty;
 
         Log.d("EKF:", "Penalty factor: " + penaltyFactor);
 
@@ -335,11 +343,36 @@ public class ExtendedKalmanFilter{
 
     // Calculates the penalty factor based on the elapsed time since the last WiFi update
     private double calculateBearingPenalty(double thetaStd, long elapsedTime) {
+//        // Convert elapsedTime to minutes (or any other unit that suits your model)
         double elapsedTimeMinutes = elapsedTime / 60000.0;
+//
+//        return thetaStd * elapsedTimeMinutes;// Adjust the divisor to control the rate of increase
+        //Calculate the fraction of the maximum elapsed time that has passed
+        double elapsedTimeFraction = Math.min(elapsedTimeMinutes, maxElapsedTimeForBearingPenalty) / maxElapsedTimeForBearingPenalty;
 
-        // Linear or exponential penalty factor based on elapsed time
-        // Example: linear growth
-        return thetaStd * elapsedTimeMinutes;// Adjust the divisor to control the rate of increase
+        // Scale the penalty between thetaStd and maxBearingPenalty based on elapsedTimeFraction
+        double penalty = thetaStd + (maxBearingPenalty - thetaStd) * elapsedTimeFraction;
+
+        Log.d("EKF:", "Bearing penalty: " + Math.toDegrees(penalty) + " original "+Math.toDegrees(thetaStd*elapsedTimeMinutes));
+
+        return penalty;
+//        // Convert elapsedTime to minutes (or any other unit that suits your model)
+//        double elapsedTimeMinutes = elapsedTime / 60000.0;
+//
+//        // Define a base penalty rate per minute
+//
+//        // Calculate the penalty factor based on the elapsed time
+//        double penaltyFactor = Math.pow(penaltyRatePerMinute, elapsedTimeMinutes);
+//
+//        // Apply the penalty factor to thetaStd
+//        double penalizedThetaStd = thetaStd * penaltyFactor;
+//
+//        // Cap the penalizedThetaStd to a maximum value if needed
+//        penalizedThetaStd = Math.min(penalizedThetaStd, maxBearingPenalty);
+//
+//        Log.d("EKF:", "Bearing penalty: " + Math.toDegrees(penalizedThetaStd) + " for elapsed time: " + elapsedTimeMinutes + " minutes original "+Math.toDegrees(thetaStd*elapsedTimeMinutes));
+//
+//        return penalizedThetaStd;
     }
 
     public void onObservationUpdate(double observeEast, double observeNorth, double pdrEast, double pdrNorth,
@@ -362,6 +395,8 @@ public class ExtendedKalmanFilter{
                 double[] startPosition = SensorFusion.getInstance().getGNSSLatLngAlt(true);
                 double[] ecefRefCoords = SensorFusion.getInstance().getEcefRefCoords();
                 double[] smoothedCoords = smoothingFilter.applySmoothing(new double[]{Xk.get(1, 0), Xk.get(2,0)});
+                Log.d("EKF", "SMOOTHED OUTPUT: East = "+smoothedCoords[0] + " North = "+smoothedCoords[1]);
+
                 SensorFusion.getInstance().notifyFusedUpdate(
                         CoordinateTransform.enuToGeodetic(smoothedCoords[0], smoothedCoords[1],
                                 altitude,
@@ -385,15 +420,18 @@ public class ExtendedKalmanFilter{
                 double predictedEast= Xk.get(1, 0);
                 double predictedNorth = Xk.get(2,0);
                 Log.d("EKF:", "Predicted ... East = "+predictedEast+" North = "+predictedNorth);
-                Log.d("EKF:", "Observation... East = "+(predictedEast - pdrEast)+" North = "+(predictedNorth - pdrNorth));
+                Log.d("EKF:", "Observation... East = "+(pdrEast - predictedEast)+" North = "+(pdrNorth - predictedNorth));
               
                 double[] observation = new double[] {(pdrEast - predictedEast), (pdrNorth-predictedNorth)};
+                //double[] observation = new double[] {(pdrEast), (pdrNorth)};
                 update(observation, theta_k, penaltyFactor);
                 Log.d("EKF:", "Recursive correction output... East = "+Xk.get(1, 0)+" North = "+Xk.get(2,0));
 
                 double[] startPosition = SensorFusion.getInstance().getGNSSLatLngAlt(true);
                 double[] ecefRefCoords = SensorFusion.getInstance().getEcefRefCoords();
                 double[] smoothedCoords = smoothingFilter.applySmoothing(new double[]{Xk.get(1, 0), Xk.get(2,0)});
+                Log.d("EKF", "SMOOTHED OUTPUT: East = "+smoothedCoords[0] + " North = "+smoothedCoords[1]);
+
                 SensorFusion.getInstance().notifyFusedUpdate(
                         CoordinateTransform.enuToGeodetic(smoothedCoords[0], smoothedCoords[1],
                                 altitude,
@@ -455,7 +493,6 @@ public class ExtendedKalmanFilter{
         this.stopEKF = true;
         Log.d("EKF:", "Stopping EKF handler");
         this.smoothingFilter.reset();
-        this.smoothingFilterNorth.reset();
         ekfThread.quitSafely();
     }
 }

@@ -213,17 +213,28 @@ public class PdrProcessing {
                 if(Math.abs((finishAvg-startElevation) - (previousElevation)) > this.floorHeight) {
                     // Change floors - 'floor' division
                     int check = (int) (finishAvg - startElevation)/this.floorHeight;
+                    Log.d("FLOOR CHANGE", "Check "+check +" current floor "+currentFloor);
                     //Check if user has returned to the starting floor.
                     if ( check == 0){
                         if ((finishAvg-startElevation) < previousElevation){
                             //if user is descending from starting floor subtract a floor.
                             this.currentFloor -= 1;
+                            Log.d("FLOOR CHANGE", "Descending -1 new floor " + currentFloor);
+
                         } else {
                             // Else the user is ascending, add a floor
                             this.currentFloor += 1;
+                            Log.d("FLOOR CHANGE", "Ascending +1 new floor " + currentFloor);
+
                         }
                     } else {
-                        this.currentFloor += check;
+                        Log.d("FLOOR CHANGE", "Adding check "+check);
+                        if (check < 0){
+                            this.currentFloor -= 1;
+                        } else {
+                            this.currentFloor += 1;
+                        }
+                        //this.currentFloor += check;
                     }
                     //Update the previous elevation to compare
                     previousElevation = (finishAvg - startElevation);
