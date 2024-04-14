@@ -1,5 +1,7 @@
 package com.openpositioning.PositionMe.Buildings;
 
+import android.util.Log;
+
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.GroundOverlay;
@@ -66,7 +68,7 @@ public class BuildingManager {
         if (floorPlanDisp != null) {
             floorPlanDisp.remove();
         }
-
+        Log.d("SETTING_CURRENT_FLOOR", "Adding ground overlay for "+currentFloor.toString());
         floorPlanOptions = new GroundOverlayOptions()
                 .image(BitmapDescriptorFactory.fromResource(getCurrentBuildingFloorPlan(currentFloor)))
                 .positionFromBounds(currentBuilding.getBuildingBounds())
@@ -184,6 +186,7 @@ public class BuildingManager {
     public void updateFloor(int floor){
         this.currentFloor = currentBuilding.convertFloorIndex(floor);
         System.out.println("Current floor "+floor+" "+currentFloor.toString());
+        Log.d("SETTING_CURRENT_FLOOR", "Current floor "+floor+" "+currentFloor.toString());
         if (currentFloor != null){
             updateGroundOverlay(currentFloor);
         }

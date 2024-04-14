@@ -1,5 +1,6 @@
 package com.openpositioning.PositionMe.sensors;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.hardware.Sensor;
@@ -12,6 +13,8 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.PowerManager;
 import android.util.Log;
+import android.view.Surface;
+import android.view.WindowManager;
 
 import androidx.preference.PreferenceManager;
 
@@ -85,6 +88,7 @@ public class SensorFusion implements SensorEventListener, Observer {
 
     // Settings
     private SharedPreferences settings;
+    private Context context;
 
     // Movement sensor instances
     private MovementSensor accelerometerSensor;
@@ -147,6 +151,7 @@ public class SensorFusion implements SensorEventListener, Observer {
     private boolean fusionAlgorithmSelection = true;
     private boolean noCoverage;
     private double[] ecefRefCoords;
+    private WindowManager currentWindowManager;
 
     private LatLng positionWifi; // stores the most recent LatLng point returned from server
     private LatLng fusedPosition; // stores the most recent LatLng point calculated by the Fusion Algorithm
@@ -242,6 +247,7 @@ public class SensorFusion implements SensorEventListener, Observer {
      */
     public void setContext(Context context) {
         // Initialise data collection devices
+        this.context = context;
         this.accelerometerSensor = new MovementSensor(context, Sensor.TYPE_ACCELEROMETER);
         this.barometerSensor = new MovementSensor(context, Sensor.TYPE_PRESSURE);
         this.gyroscopeSensor = new MovementSensor(context, Sensor.TYPE_GYROSCOPE);
@@ -365,9 +371,36 @@ public class SensorFusion implements SensorEventListener, Observer {
 
             case Sensor.TYPE_ROTATION_VECTOR:
                 // Save values
-                this.rotation = LowPassFilter.applyFilter(sensorEvent.values.clone(), this.rotation);
+                this.rotation = sensorEvent.values.clone();
                 float[] rotationVectorDCM = new float[9];
                 SensorManager.getRotationMatrixFromVector(rotationVectorDCM,this.rotation);
+
+//                int axisX;
+//                int axisY;
+//                switch (currentWindowManager.getDefaultDisplay().getRotation()) {
+//                    case Surface.ROTATION_90:
+//                        axisX = SensorManager.AXIS_Y;
+//                        axisY = SensorManager.AXIS_MINUS_X;
+//                        break;
+//
+//                    case Surface.ROTATION_180:
+//                        axisX = SensorManager.AXIS_MINUS_X;
+//                        axisY = SensorManager.AXIS_MINUS_Y;
+//                        break;
+//
+//                    case Surface.ROTATION_270:
+//                        axisX = SensorManager.AXIS_MINUS_Y;
+//                        axisY = SensorManager.AXIS_X;
+//                        break;
+//                    case Surface.ROTATION_0:
+//                    default:
+//                        axisX = SensorManager.AXIS_X;
+//                        axisY = SensorManager.AXIS_Y;
+//                        break;
+//                }
+//                float[] remappedMatrix = new float[9];
+//                SensorManager.remapCoordinateSystem(rotationVectorDCM, axisX, axisY, remappedMatrix);
+//                SensorManager.getOrientation(remappedMatrix, this.orientation);
                 SensorManager.getOrientation(rotationVectorDCM, this.orientation);
                 notifySensorUpdate(SensorFusionUpdates.update_type.ORIENTATION_UPDATE);
                 this.turnDetector.ProcessOrientationData(this.orientation[0]);
@@ -660,6 +693,10 @@ public class SensorFusion implements SensorEventListener, Observer {
         }
     }
 
+    public void setCurrentWindowManager(WindowManager newWindowManager) {
+        this.currentWindowManager = newWindowManager;
+    }
+
     public float getAbsoluteElevation(){
         return SensorManager.getAltitude(
                 SensorManager.PRESSURE_STANDARD_ATMOSPHERE, pressure);
@@ -809,15 +846,15 @@ public class SensorFusion implements SensorEventListener, Observer {
      * A helper method used to notify all observers that an update is available.
      */
     public void notifyFusedUpdate(LatLng fused_pos){
-        fusedPosition = fused_pos;
-        for (SensorFusionUpdates observer : recordingUpdates) {
-            observer.onFusedUpdate(fused_pos);
-        }
         // store the value - ID, timestamp, latlng
         long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
         String data = "out FUSED " + timestamp + " " + fused_pos.latitude + " " + fused_pos.longitude + " " + getElevation();
         System.out.println(data);
         writeLineTextFile(data);
+        fusedPosition = fused_pos;
+        for (SensorFusionUpdates observer : recordingUpdates) {
+            observer.onFusedUpdate(fused_pos);
+        }
     }
 
     /**
@@ -1148,8 +1185,6 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void updateFusionWifi(JSONObject wifiResponse){
 
         try {
-            System.out.println("===== in update particle fusion ====");
-
             if (wifiResponse == null){
                 this.positionWifi = null;
 
@@ -1240,15 +1275,21 @@ public class SensorFusion implements SensorEventListener, Observer {
 
     public void initiateTextFile(){
         try {
+            if (file.exists()) {
+                file.delete(); // Delete the file if it already exists
+            }
+            Log.d("TEXT_FILE", "Text File initiated");
             fileWriter = new FileWriter(file);
             bufferedWriter = new BufferedWriter(fileWriter);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
     public void writeLineTextFile(String data){
         try {
             if (bufferedWriter != null) {
+                Log.d("TEXT_FILE", "Writing line "+data);
                 bufferedWriter.append(data);
                 bufferedWriter.newLine();
             }

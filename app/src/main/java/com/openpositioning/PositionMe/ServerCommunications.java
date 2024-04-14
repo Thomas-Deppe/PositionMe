@@ -557,6 +557,8 @@ public class ServerCommunications implements Observable {
      */
     @Override
     public void notifyObservers(int index) {
+        if (observers == null) return;
+
         for(Observer o : observers) {
             if(index == 0 && o instanceof FilesFragment) {
                 o.updateServer(new String[] {infoResponse});

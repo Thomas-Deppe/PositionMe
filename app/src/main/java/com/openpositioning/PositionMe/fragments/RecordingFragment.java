@@ -6,6 +6,7 @@ import android.location.Location;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -31,6 +32,7 @@ import com.openpositioning.PositionMe.Utils.CoordinateTransform;
 import com.openpositioning.PositionMe.Buildings.Floors;
 import com.openpositioning.PositionMe.R;
 import com.openpositioning.PositionMe.SensorFusionUpdates;
+import com.openpositioning.PositionMe.Utils.ExponentialSmoothingFilter;
 import com.openpositioning.PositionMe.sensors.SensorFusion;
 
 
@@ -48,7 +50,7 @@ import com.openpositioning.PositionMe.sensors.SensorFusion;
  */
 public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
-    private static final int numberOfPointsToSmooth = 50;
+    private static final double smoothingFactor = 0.35;
     //Stores the map displayed
     private GoogleMap recording_map;
 
@@ -83,6 +85,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
     //Used to manipulate the floor plans displayed and track which building the user is in.
     private BuildingManager buildingManager;
+    private ExponentialSmoothingFilter pdrSmoothing;
     //The coordinates of the users current position
     private LatLng currentPosition, wifiPosition, pdrPosition;
 
@@ -158,7 +161,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             checkBuildingBounds(currentPosition);
 
             int calcFloor = sensorFusion.getCurrentFloor();
-            System.out.println("Current floor map ready  "+calcFloor);
+            Log.d("SETTING_CURRENT_FLOOR", "ON MAP READY: received starting floor "+calcFloor);
             updateFloor(calcFloor);
         }
     };
@@ -198,6 +201,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         if (mapFragment != null) {
             mapFragment.getMapAsync(rec_map_callback);
         }
+        this.pdrSmoothing = new ExponentialSmoothingFilter(smoothingFactor, 2);
 
         // constructor + instantiation of Map Ready
         uiElements = new UIelements(getContext());
@@ -354,11 +358,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                         buildingManager.removeGroundOverlay();
                         uiElements.getNoCoverageIcon().setVisibility(View.VISIBLE);
                         sensorFusion.setNoCoverage(true);
-                    }
-                    else if (buildingManager.getCurrentBuilding().equals(Buildings.CORRIDOR_NUCLEUS)){
-                        uiElements.getNoCoverageIcon().setVisibility(View.VISIBLE);
-                    }
-                    else {
+                    } else {
                         uiElements.getNoCoverageIcon().setVisibility(View.GONE);
                         sensorFusion.setNoCoverage(false);
                         buildingManager.addGroundOverlay();
@@ -393,13 +393,14 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 // display all new x,y displament and distance
                 uiElements.displayXYDistance(distance, pdrValues);
 
-                previousPosX = pdrValues[0];
-                previousPosY = pdrValues[1];
+                double[] smoothedPDR = pdrSmoothing.applySmoothing(pdrValues);
+                previousPosX = smoothedPDR[0];
+                previousPosY = smoothedPDR[1];
 
                 //Updates the users position and path on the map
                 if (recording_map != null) {
                     //Transform the ENU coordinates to WSG84 coordinates google maps uses
-                    LatLng user_step = CoordinateTransform.enuToGeodetic(pdrValues[0], pdrValues[1], elevationVal, startPosition[0], startPosition[1], ecefRefCoords);
+                    LatLng user_step = CoordinateTransform.enuToGeodetic(smoothedPDR[0], smoothedPDR[1], elevationVal, startPosition[0], startPosition[1], ecefRefCoords);
                     pdrPosition = user_step;
 
                     // display the trajectory and the points
@@ -529,7 +530,7 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 }
 
                 // otherwise display the new wifi point
-                noCoverageIcon.setVisibility(View.GONE);
+                uiElements.getNoCoverageIcon().setVisibility(View.GONE);
 
                 wifiPosition = latlngFromWifiServer;
                 if (recording_map == null){return;}
@@ -553,14 +554,18 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
      * @param calcFloor The floor calculated by the {@link com.openpositioning.PositionMe.PdrProcessing}.
      */
     private void updateFloor(int calcFloor){
-        System.out.println("Current floor in update "+calcFloor);
+        Log.d("SETTING_CURRENT_FLOOR", "Current floor in update "+calcFloor);
+        System.out.println();
         if (currentFloor != calcFloor){
-            System.out.println("Current floor pass if "+calcFloor+" "+ currentFloor);
+            Log.d("SETTING_CURRENT_FLOOR", "Current floor pass if "+calcFloor+" "+ currentFloor);
+            System.out.println();
             currentFloor = calcFloor;
             if (buildingManager != null){
                 if (!buildingManager.getCurrentBuilding().equals(Buildings.UNSPECIFIED)){
 
                     // set new floor in the spinner
+                    Log.d("SETTING_CURRENT_FLOOR", "update floor spinner to  "+buildingManager.convertFloorToSpinnerIndex(currentFloor));
+
                     uiElements.setFloorSpinnerFloorNumber(buildingManager.convertFloorToSpinnerIndex(currentFloor));
 
                     updateFloorPlan(currentFloor);
@@ -568,6 +573,8 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                     // remove the trajectory from the old floor
                     uiElements.adjustUItoFloorChange();
                 }
+            } else {
+                currentFloor = 0;
             }
         }
     }

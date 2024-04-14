@@ -1,5 +1,7 @@
 package com.openpositioning.PositionMe.Buildings;
 
+import android.util.Log;
+
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.openpositioning.PositionMe.R;
@@ -148,6 +150,7 @@ public enum Buildings {
      * @return The Floors enum of the corresponding floor for the index.
      */
     public Floors convertFloorIndex(int index){
+        Log.d("SETTING_CURRENT_FLOOR", "attempt to resolve index to floor "+index);
         Floors updatedFloor = Floors.Ground;
         switch (this){
             case NUCLEUS:

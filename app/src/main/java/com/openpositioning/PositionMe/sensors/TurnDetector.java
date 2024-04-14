@@ -25,7 +25,6 @@ public class TurnDetector {
          * @return The updated type, or the current type if no update should be made according to the rules.
          */
         public MovementType compareAndUpdate(MovementType newType) {
-            Log.d("TURN_DETECTOR", "Updating "+this.toString() + " to "+newType.toString());
             if (this == TURN) {
                 // If the current type is TURN, it remains unchanged.
                 return this;
@@ -57,16 +56,12 @@ public class TurnDetector {
         if (azimuthChange > 180) {
             azimuthChange = 360 - azimuthChange;
         }
-        Log.d("TURN_DETECTOR", "Analysing azimuth change: " + azimuthChange);
 
         if (azimuthChange > TURN_THRESHOLD){
-            Log.d("TURN_DETECTOR", "Motion: TURN " + azimuthChange);
             userMovement = userMovement.compareAndUpdate(MovementType.TURN);
         } else if (azimuthChange > PSEUDO_TURN){
-            Log.d("TURN_DETECTOR", "Motion: PSEUDO " + azimuthChange);
             userMovement = userMovement.compareAndUpdate(MovementType.PSEUDO_TURN);
         } else if (azimuthChange < PSEUDO_TURN){
-            Log.d("TURN_DETECTOR", "Motion: STRAIGHT" + azimuthChange);
             userMovement = userMovement.compareAndUpdate(MovementType.STRAIGHT);
         }
 
