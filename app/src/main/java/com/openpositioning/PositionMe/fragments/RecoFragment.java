@@ -50,7 +50,7 @@
 //import com.google.android.gms.maps.model.PolylineOptions;
 //import com.openpositioning.PositionMe.Buildings.BuildingManager;
 //import com.openpositioning.PositionMe.Buildings.Buildings;
-//import com.openpositioning.PositionMe.TrajectoryDisplay;
+//import com.openpositioning.PositionMe.UserIterface.TrajectoryDisplay;
 //import com.openpositioning.PositionMe.Utils.ConvertVectorToBitMap;
 //import com.openpositioning.PositionMe.Utils.CoordinateTransform;
 //import com.openpositioning.PositionMe.Buildings.Floors;

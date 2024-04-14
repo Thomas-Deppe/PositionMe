@@ -1,4 +1,4 @@
-package com.openpositioning.PositionMe;
+package com.openpositioning.PositionMe.UserIterface;
 
 import android.app.Activity;
 import android.app.Dialog;
@@ -30,6 +30,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.openpositioning.PositionMe.Buildings.Buildings;
+import com.openpositioning.PositionMe.R;
 import com.openpositioning.PositionMe.Utils.ConvertVectorToBitMap;
 import com.openpositioning.PositionMe.fragments.HomeFragment;
 import com.openpositioning.PositionMe.fragments.RecordingFragment;

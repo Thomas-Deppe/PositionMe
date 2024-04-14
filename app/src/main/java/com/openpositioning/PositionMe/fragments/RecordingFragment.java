@@ -26,7 +26,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.openpositioning.PositionMe.Buildings.BuildingManager;
 import com.openpositioning.PositionMe.Buildings.Buildings;
-import com.openpositioning.PositionMe.UIelements;
+import com.openpositioning.PositionMe.UserIterface.UIelements;
 import com.openpositioning.PositionMe.Utils.CoordinateTransform;
 import com.openpositioning.PositionMe.Buildings.Floors;
 import com.openpositioning.PositionMe.R;
