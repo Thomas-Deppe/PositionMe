@@ -1,8 +1,6 @@
-package com.openpositioning.PositionMe;
+package com.openpositioning.PositionMe.UserIterface;
 
 import android.content.Context;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
@@ -10,9 +8,8 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.openpositioning.PositionMe.R;
 import com.openpositioning.PositionMe.Utils.ConvertVectorToBitMap;
-import com.openpositioning.PositionMe.sensors.MovementSensor;
-import com.openpositioning.PositionMe.sensors.SensorFusion;
 
 import java.util.ArrayList;
 import java.util.List;
