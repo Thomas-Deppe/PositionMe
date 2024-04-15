@@ -1,6 +1,5 @@
 package com.openpositioning.PositionMe.sensors;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.hardware.Sensor;
@@ -13,14 +12,12 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.PowerManager;
 import android.util.Log;
-import android.view.Surface;
 import android.view.WindowManager;
 
 import androidx.preference.PreferenceManager;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.openpositioning.PositionMe.FusionAlgorithms.ExtendedKalmanFilter;
-import com.openpositioning.PositionMe.FusionAlgorithms.ExtendedKalmanFilterPrev;
 import com.openpositioning.PositionMe.Utils.CoordinateTransform;
 import com.openpositioning.PositionMe.Utils.JsonConverter;
 import com.openpositioning.PositionMe.MainActivity;
@@ -30,7 +27,6 @@ import com.openpositioning.PositionMe.PdrProcessing;
 import com.openpositioning.PositionMe.SensorFusionUpdates;
 import com.openpositioning.PositionMe.ServerCommunications;
 import com.openpositioning.PositionMe.Traj;
-import com.openpositioning.PositionMe.Utils.LowPassFilter;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -71,8 +67,8 @@ import java.util.stream.Stream;
  */
 public class SensorFusion implements SensorEventListener, Observer {
 
-    //region Static variables
-    // Singleton Class
+    // Static variables
+    // Initialize sensor fusion singleton
     private static final SensorFusion sensorFusion = new SensorFusion();
     // Static constant for calculations with milliseconds
     private static final long TIME_CONST = 10;
@@ -80,9 +76,8 @@ public class SensorFusion implements SensorEventListener, Observer {
     public static final float FILTER_COEFFICIENT = 0.96f;
     //Tuning value for low pass filter
     private static final float ALPHA = 0.8f;
-    //endregion
 
-    //region Instance variables
+    // Instance variables
     // Keep device awake while recording
     private PowerManager.WakeLock wakeLock;
 
@@ -115,11 +110,14 @@ public class SensorFusion implements SensorEventListener, Observer {
     // Settings
     private boolean saveRecording;
     private float filter_coefficient;
+
     // Variables to help with timed events
     private long absoluteStartTime;
     private long bootTime;
+
     // Timer object for scheduling data recording
     private Timer storeTrajectoryTimer;
+
     // Counters for dividing timer to record data every 1 second/ every 5 seconds
     private int counter;
     private int secondCounter;
@@ -137,9 +135,11 @@ public class SensorFusion implements SensorEventListener, Observer {
     private float proximity;
     private float[] R;
     private int stepCounter ;
+
     // Derived values
     private float elevation;
     private boolean elevator;
+
     // Location values
     private double latitude;
     private double longitude;
@@ -148,11 +148,12 @@ public class SensorFusion implements SensorEventListener, Observer {
     private float[] startLocation;
     private double[] startRef;
 
+    // Boolean to control fusion algorithm selection
     private boolean fusionAlgorithmSelection = true;
     private boolean noCoverage;
     private double[] ecefRefCoords;
-    private WindowManager currentWindowManager;
 
+    // Stores recent Wifi position and Fused Position
     private LatLng positionWifi; // stores the most recent LatLng point returned from server
     private LatLng fusedPosition; // stores the most recent LatLng point calculated by the Fusion Algorithm
 
@@ -174,9 +175,11 @@ public class SensorFusion implements SensorEventListener, Observer {
     // Trajectory displaying class
     private PathView pathView;
 
+    // Filter classes
     private ParticleFilter particleFilter;
     private ExtendedKalmanFilter extendedKalmanFilter;
-    //private ExtendedKalmanFilterPrev extendedKalmanFilter;
+
+    // Turn detector class
     private TurnDetector turnDetector;
 
     //Creates a list of classes which wish to receive asynchronous updates from this class.
@@ -263,7 +266,6 @@ public class SensorFusion implements SensorEventListener, Observer {
         wifiProcessor.registerObserver(this);
         this.gnssProcessor = new GNSSDataProcessor(context,locationListener);
         // Create object handling HTTPS communication
-        //this.serverCommunications = new ServerCommunications(context);
         this.serverCommunications = ServerCommunications.getMainInstance();
         this.serverCommunications.registerObserver(this);
         // Save absolute and relative start time
@@ -374,33 +376,6 @@ public class SensorFusion implements SensorEventListener, Observer {
                 this.rotation = sensorEvent.values.clone();
                 float[] rotationVectorDCM = new float[9];
                 SensorManager.getRotationMatrixFromVector(rotationVectorDCM,this.rotation);
-
-//                int axisX;
-//                int axisY;
-//                switch (currentWindowManager.getDefaultDisplay().getRotation()) {
-//                    case Surface.ROTATION_90:
-//                        axisX = SensorManager.AXIS_Y;
-//                        axisY = SensorManager.AXIS_MINUS_X;
-//                        break;
-//
-//                    case Surface.ROTATION_180:
-//                        axisX = SensorManager.AXIS_MINUS_X;
-//                        axisY = SensorManager.AXIS_MINUS_Y;
-//                        break;
-//
-//                    case Surface.ROTATION_270:
-//                        axisX = SensorManager.AXIS_MINUS_Y;
-//                        axisY = SensorManager.AXIS_X;
-//                        break;
-//                    case Surface.ROTATION_0:
-//                    default:
-//                        axisX = SensorManager.AXIS_X;
-//                        axisY = SensorManager.AXIS_Y;
-//                        break;
-//                }
-//                float[] remappedMatrix = new float[9];
-//                SensorManager.remapCoordinateSystem(rotationVectorDCM, axisX, axisY, remappedMatrix);
-//                SensorManager.getOrientation(remappedMatrix, this.orientation);
                 SensorManager.getOrientation(rotationVectorDCM, this.orientation);
                 notifySensorUpdate(SensorFusionUpdates.update_type.ORIENTATION_UPDATE);
                 this.turnDetector.ProcessOrientationData(this.orientation[0]);
@@ -448,7 +423,6 @@ public class SensorFusion implements SensorEventListener, Observer {
         @Override
         public void onLocationChanged(Location location) {
             if(location != null){
-                //Toast.makeText(context, "Location Changed", Toast.LENGTH_SHORT).show();
                 Log.d("LOCATION_CHANGED", "location Update");
                 latitude = location.getLatitude();
                 longitude = location.getLongitude();
@@ -465,7 +439,6 @@ public class SensorFusion implements SensorEventListener, Observer {
                             .setSpeed(speed)
                             .setProvider(provider)
                             .setRelativeTimestamp(System.currentTimeMillis()-absoluteStartTime));
-                    System.out.println("gnss has recorded a new point");
                     updateFusionGNSS(latitude, longitude ,altitude);
                     notifySensorUpdate(SensorFusionUpdates.update_type.GNSS_UPDATE);
                 }
@@ -473,6 +446,12 @@ public class SensorFusion implements SensorEventListener, Observer {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * Function that allows Add tag button to save fusion trajectory
+     *
+     */
     public void addTagFusionTraj(LatLng fusion_position){
         if(saveRecording) {
             trajectory.addGnssData(Traj.GNSS_Sample.newBuilder()
@@ -481,7 +460,6 @@ public class SensorFusion implements SensorEventListener, Observer {
                     .setLongitude((float) fusion_position.longitude)
                     .setProvider("fusion")
                     .setRelativeTimestamp(System.currentTimeMillis()-absoluteStartTime));
-            System.out.println("fusion position has been recorded");
         }
     }
 
@@ -500,7 +478,6 @@ public class SensorFusion implements SensorEventListener, Observer {
                 updateFusionWifi(null);
             }
             JSONObject wifiresponse = (JSONObject) responseList[0];
-            System.out.println("server reponse: " + wifiresponse);
             updateFusionWifi(wifiresponse);
         }
     }
@@ -538,81 +515,21 @@ public class SensorFusion implements SensorEventListener, Observer {
     }
 
     /**
-     * Method used for converting an array of orientation angles into a rotation matrix.
-     *
-     * @param o An array containing orientation angles in radians
-     * @return resultMatrix representing the orientation angles
-     */
-    private float[] getRotationMatrixFromOrientation(float[] o) {
-        float[] xM = new float[9];
-        float[] yM = new float[9];
-        float[] zM = new float[9];
-
-        float sinX = (float)Math.sin(o[1]);
-        float cosX = (float)Math.cos(o[1]);
-        float sinY = (float)Math.sin(o[2]);
-        float cosY = (float)Math.cos(o[2]);
-        float sinZ = (float)Math.sin(o[0]);
-        float cosZ = (float)Math.cos(o[0]);
-
-        // rotation about x-axis (pitch)
-        xM[0] = 1.0f; xM[1] = 0.0f; xM[2] = 0.0f;
-        xM[3] = 0.0f; xM[4] = cosX; xM[5] = sinX;
-        xM[6] = 0.0f; xM[7] = -sinX; xM[8] = cosX;
-
-        // rotation about y-axis (roll)
-        yM[0] = cosY; yM[1] = 0.0f; yM[2] = sinY;
-        yM[3] = 0.0f; yM[4] = 1.0f; yM[5] = 0.0f;
-        yM[6] = -sinY; yM[7] = 0.0f; yM[8] = cosY;
-
-        // rotation about z-axis (azimuth)
-        zM[0] = cosZ; zM[1] = sinZ; zM[2] = 0.0f;
-        zM[3] = -sinZ; zM[4] = cosZ; zM[5] = 0.0f;
-        zM[6] = 0.0f; zM[7] = 0.0f; zM[8] = 1.0f;
-
-        // rotation order is y, x, z (roll, pitch, azimuth)
-        float[] resultMatrix = matrixMultiplication(xM, yM);
-        resultMatrix = matrixMultiplication(zM, resultMatrix);
-        return resultMatrix;
-    }
-
-    /**
-     * Performs and matrix multiplication of two 3x3 matrices and returns the product.
-     *
-     * @param A An array representing a 3x3 matrix
-     * @param B An array representing a 3x3 matrix
-     * @return result representing the product of A and B
-     */
-    private float[] matrixMultiplication(float[] A, float[] B) {
-        float[] result = new float[9];
-
-        result[0] = A[0] * B[0] + A[1] * B[3] + A[2] * B[6];
-        result[1] = A[0] * B[1] + A[1] * B[4] + A[2] * B[7];
-        result[2] = A[0] * B[2] + A[1] * B[5] + A[2] * B[8];
-
-        result[3] = A[3] * B[0] + A[4] * B[3] + A[5] * B[6];
-        result[4] = A[3] * B[1] + A[4] * B[4] + A[5] * B[7];
-        result[5] = A[3] * B[2] + A[4] * B[5] + A[5] * B[8];
-
-        result[6] = A[6] * B[0] + A[7] * B[3] + A[8] * B[6];
-        result[7] = A[6] * B[1] + A[7] * B[4] + A[8] * B[7];
-        result[8] = A[6] * B[2] + A[7] * B[5] + A[8] * B[8];
-
-        return result;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
     public void onAccuracyChanged(Sensor sensor, int i) {}
     //endregion
 
+    /**
+     * A helper function to get the boot time of the application.
+     * @return a long of the boot time
+     */
     public long getBootTime() {return this.bootTime;}
 
     /**
      * A helper function to get the calculated PDR coordinates as doubles for more accurate conversion between coordinates.
-     * @return a double array with teh X and Y PDR coordiantes
+     * @return a double array with the X and Y PDR coordinates
      */
     public double[] getCurrentPDRCalc(){
        return pdrProcessing.getAccPDRMovement();
@@ -656,6 +573,10 @@ public class SensorFusion implements SensorEventListener, Observer {
         return latLongAlt;
     }
 
+    /**
+     * A helper function to get the calculated ECEF coordinates as doubles for more accurate conversion between coordinates.
+     * @return a double array with the ECEF coordinates
+     */
     public double[] getEcefRefCoords(){
         return ecefRefCoords;
     }
@@ -685,6 +606,12 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.ecefRefCoords = CoordinateTransform.geodeticToEcef(startPosition[0],startPosition[1], startPosition[2]);
     }
 
+    /**
+     * Sets the flag indicating whether there is no coverage available.
+     * If the fusion algorithm selection is enabled, it adjusts the usage of WiFi in the extended Kalman filter accordingly.
+     *
+     * @param noCoverage True if there is no coverage, false otherwise.
+     */
     public void setNoCoverage(boolean noCoverage){
         this.noCoverage = noCoverage;
         Log.d("EKF", "SETTING NO COVERAGE "+noCoverage);
@@ -693,10 +620,20 @@ public class SensorFusion implements SensorEventListener, Observer {
         }
     }
 
+    /**
+     * Sets the current window manager. Placeholder method.
+     *
+     * @param newWindowManager The new window manager.
+     */
     public void setCurrentWindowManager(WindowManager newWindowManager) {
-        this.currentWindowManager = newWindowManager;
+        // Placeholder method
     }
 
+    /**
+     * Calculates the absolute elevation using the pressure from the sensors.
+     *
+     * @return The absolute elevation in meters.
+     */
     public float getAbsoluteElevation(){
         return SensorManager.getAltitude(
                 SensorManager.PRESSURE_STANDARD_ATMOSPHERE, pressure);
@@ -815,9 +752,6 @@ public class SensorFusion implements SensorEventListener, Observer {
                 case FUSED_UPDATE:
                     observer.onFusedUpdate(fusedPosition);
                     break;
-                //case PARTICLE_UPDATE:
-                //    observer.onParticleUpdate(fusedPosition);
-                //    break;
                 case WIFI_UPDATE:
                     observer.onWifiUpdate(positionWifi);
             }
@@ -827,29 +761,10 @@ public class SensorFusion implements SensorEventListener, Observer {
     /**
      * A helper method used to notify all observers that an update is available.
      */
-    /*
-    public void notifyParticleUpdate(LatLng particle_pos){
-        fusedPosition = particle_pos;
-
-        for (SensorFusionUpdates observer : recordingUpdates) {
-            observer.onParticleUpdate(particle_pos);
-        }
-
-        long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
-        String data = "out PARTICLE " + timestamp + " " + particle_pos.latitude + " " + particle_pos.longitude + " " + getElevation();
-        System.out.println(data);
-        writeLineTextFile(data);
-    }
-     */
-
-    /**
-     * A helper method used to notify all observers that an update is available.
-     */
     public void notifyFusedUpdate(LatLng fused_pos){
         // store the value - ID, timestamp, latlng
         long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
         String data = "out FUSED " + timestamp + " " + fused_pos.latitude + " " + fused_pos.longitude + " " + getElevation();
-        System.out.println(data);
         writeLineTextFile(data);
         fusedPosition = fused_pos;
         for (SensorFusionUpdates observer : recordingUpdates) {
@@ -994,8 +909,6 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.trajectory = Traj.Trajectory.newBuilder()
                 .setAndroidVersion(Build.VERSION.RELEASE)
                 .setStartTimestamp(absoluteStartTime)
-                /*.addApsData(Traj.AP_Data.newBuilder().setMac(example_mac).setSsid(example_ssid)
-                        .setFrequency(example_frequency))*/
                 .setAccelerometerInfo(createInfoBuilder(accelerometerSensor))
                 .setGyroscopeInfo(createInfoBuilder(gyroscopeSensor))
                 .setMagnetometerInfo(createInfoBuilder(magnetometerSensor))
@@ -1024,7 +937,6 @@ public class SensorFusion implements SensorEventListener, Observer {
      */
     public void stopRecording() {
         // Only cancel if we are running
-        //setCurrentFloor(0);
         if(this.saveRecording) {
             this.saveRecording = false;
             this.turnDetector.stopMonitoring();
@@ -1153,7 +1065,11 @@ public class SensorFusion implements SensorEventListener, Observer {
 
     // region copied from FUSION PROCESSING
 
-    // block for structure
+    /**
+     * Updates the fusion process with Pedestrian Dead Reckoning (PDR) data.
+     * Calculates new PDR values and elevation, then calls the appropriate fusion algorithm.
+     * Stores the resulting position and timestamps it.
+     */
     public void updateFusionPDR(){
 
         // calculate new PDR, save as global variable
@@ -1174,14 +1090,19 @@ public class SensorFusion implements SensorEventListener, Observer {
             this.particleFilter.update(latitude, longitude);
         }
 
-        // todo this is wrong
         // store the value - ID, timestamp, latlng
         long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
         String data = "out PDR " + timestamp + " " + latitude + " " + longitude + " " + getElevation();
-        System.out.println(data);
         writeLineTextFile(data);
     }
 
+    /**
+     * Updates the fusion process with WiFi positioning data.
+     * Extracts latitude, longitude, and floor information from the given JSON object.
+     * Calls the appropriate fusion algorithm and stores the resulting position.
+     *
+     * @param wifiResponse The JSON object containing WiFi positioning data.
+     */
     public void updateFusionWifi(JSONObject wifiResponse){
 
         try {
@@ -1190,7 +1111,6 @@ public class SensorFusion implements SensorEventListener, Observer {
 
                 // display the position on UI
                 notifySensorUpdate(SensorFusionUpdates.update_type.WIFI_UPDATE);
-
                 return;
             }
 
@@ -1217,7 +1137,6 @@ public class SensorFusion implements SensorEventListener, Observer {
             // store the value - ID, timestamp, latlng
             long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
             String data = "out wifi " + timestamp + " " + latitude + " " + longitude + " " + getElevation();
-            System.out.println(data);
             writeLineTextFile(data);
 
         } catch (JSONException e) {
@@ -1225,6 +1144,15 @@ public class SensorFusion implements SensorEventListener, Observer {
         }
 
     }
+
+    /**
+     * Updates the fusion process with Global Navigation Satellite System (GNSS) data.
+     * Calls the appropriate fusion algorithm and stores the resulting position.
+     *
+     * @param latitude  The latitude from GNSS data.
+     * @param longitude The longitude from GNSS data.
+     * @param altitude  The altitude from GNSS data.
+     */
     public void updateFusionGNSS(double latitude,double longitude, double altitude){
 
         // call fusion algorithm
@@ -1242,37 +1170,28 @@ public class SensorFusion implements SensorEventListener, Observer {
         // store the value - ID, timestamp, latlng
         long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
         String data = "out GNSS " + timestamp + " " + latitude + " " + longitude + " " + getElevation();
-        System.out.println(data);
         writeLineTextFile(data);
     }
 
-
+    /**
+     * Initializes the fusion algorithm based on user settings.
+     * Creates either an Extended Kalman Filter or a Particle Filter instance.
+     */
     public void initialiseFusionAlgorithm() {
         // Picks the Fusion Algorithm to run
         fusionAlgorithmSelection = !(this.settings.getBoolean("fusion_enable", false));
-        System.out.println("Choosing Fusion Algorithm "+ fusionAlgorithmSelection);
         this.noCoverage = true;
         if (fusionAlgorithmSelection) {
             this.extendedKalmanFilter = new ExtendedKalmanFilter();
-            //this.extendedKalmanFilter = new ExtendedKalmanFilterPrev();
         }else{
             this.particleFilter = new ParticleFilter();
         }
     }
 
-//    public void setEnableFusionAlgorithms(){
-//        // Check what fusion algorithm is set to be used
-//        enableParticleFilter = this.settings.getBoolean("fusion_enable", false);
-//        enableKalmanFilter = !enableParticleFilter;
-//
-//        System.out.println("kalman enable: "+ enableKalmanFilter);
-//        System.out.println("particle enable: "+ enableParticleFilter);
-//    }
-
-    public boolean getEnableFusionAlgorithms(){
-        return fusionAlgorithmSelection;
-    }
-
+    /**
+     * Initializes the text file for storing output data.
+     * Creates a new text file and sets up file writers.
+     */
     public void initiateTextFile(){
         try {
             if (file.exists()) {
@@ -1286,6 +1205,11 @@ public class SensorFusion implements SensorEventListener, Observer {
         }
     }
 
+    /**
+     * Writes a line of data to the output text file.
+     *
+     * @param data The data to be written to the file.
+     */
     public void writeLineTextFile(String data){
         try {
             if (bufferedWriter != null) {
@@ -1298,6 +1222,11 @@ public class SensorFusion implements SensorEventListener, Observer {
         }
     }
 
+    /**
+     * Writes the start location to the output text file.
+     *
+     * @param startPosition The start position data to be written to the file.
+     */
     public void startLocationWriteTextFile(double[] startPosition){
 
         if (fileWriter == null || bufferedWriter == null || startPosition == null){return;}
@@ -1305,10 +1234,13 @@ public class SensorFusion implements SensorEventListener, Observer {
         // store the value - ID, timestamp, latlng
         long timestamp = android.os.SystemClock.uptimeMillis() - bootTime;
         String data = "out START LOCATION " + timestamp + " " + startPosition[0] + " " + startPosition[1] + " " + startPosition[2];
-        System.out.println(data);
         writeLineTextFile(data);
     }
 
+    /**
+     * Closes the fusion output text file.
+     * Closes both the file writer and buffered writer.
+     */
     public void closeTextFile() {
         try {
             if (bufferedWriter != null) {

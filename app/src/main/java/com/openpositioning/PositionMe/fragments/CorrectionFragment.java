@@ -121,11 +121,9 @@ public class CorrectionFragment extends Fragment {
                 // Add a marker at the start position and move the camera
                 start = new LatLng(startPosition[0], startPosition[1]);
                 mMap.addMarker(new MarkerOptions().position(start).title("Start Position"));
-                System.out.println("onMapReady scaling ratio: " + scalingRatio);
                 // Calculate zoom of google maps based on the scaling ration from PathView
                 double zoom = Math.log(156543.03392f * Math.cos(startPosition[0] * Math.PI / 180)
                         * scalingRatio) / Math.log(2);
-                System.out.println("onMapReady zoom: " + zoom);
                 //Center the camera
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(start, (float) zoom));
             }

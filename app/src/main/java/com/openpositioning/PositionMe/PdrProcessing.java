@@ -129,8 +129,6 @@ public class PdrProcessing {
         this.floorHeight = settings.getInt("floor_height", 4);
         // Array for holding initial values
         this.startElevationBuffer = new Float[3];
-        // Start floor - assumed to be zero
-        //this.currentFloor = 0;
     }
 
     /**
@@ -150,11 +148,9 @@ public class PdrProcessing {
 
         // Calculate step length
         if(!useManualStep) {
-            //ArrayList<Double> accelMagnitudeFiltered = filter(accelMagnitudeOvertime);
             // Estimate stride
             this.stepLength = weibergMinMax(accelMagnitudeOvertime);
             Log.d("EKF", "StrideLength "+stepLength);
-            // System.err.println("Step Length" + stepLength);
         }
 
         // Increment aggregate variables
@@ -208,8 +204,8 @@ public class PdrProcessing {
                 List<Float> elevationMemory = this.elevationList.getListCopy();
                 OptionalDouble currentAvg = elevationMemory.stream().mapToDouble(f -> f).average();
                 float finishAvg = currentAvg.isPresent() ? (float) currentAvg.getAsDouble() : 0;
-                // Check if we moved floor by comparing with start position
 
+                // Check if we moved floor by comparing with start position
                 if(Math.abs((finishAvg-startElevation) - (previousElevation)) > this.floorHeight) {
                     // Change floors - 'floor' division
                     int check = (int) (finishAvg - startElevation)/this.floorHeight;
@@ -347,14 +343,10 @@ public class PdrProcessing {
             OptionalDouble optVerticalAvg = verticalMemory.stream().mapToDouble(Math::abs).average();
             float verticalAvg = optVerticalAvg.isPresent() ? (float) optVerticalAvg.getAsDouble() : 0;
 
-
             // calculate average horizontal accel
             List<Float> horizontalMemory = this.horizontalAccel.getListCopy();
             OptionalDouble optHorizontalAvg = horizontalMemory.stream().mapToDouble(Math::abs).average();
             float horizontalAvg = optHorizontalAvg.isPresent() ? (float) optHorizontalAvg.getAsDouble() : 0;
-
-            //System.err.println("LIFT: Vertical: " + verticalAvg);
-            //System.err.println("LIFT: Horizontal: " + horizontalAvg);
 
             if(this.settings.getBoolean("overwrite_constants", false)) {
                 float eps = Float.parseFloat(settings.getString("epsilon", "0.18"));

@@ -185,7 +185,6 @@ public class BuildingManager {
      */
     public void updateFloor(int floor){
         this.currentFloor = currentBuilding.convertFloorIndex(floor);
-        System.out.println("Current floor "+floor+" "+currentFloor.toString());
         Log.d("SETTING_CURRENT_FLOOR", "Current floor "+floor+" "+currentFloor.toString());
         if (currentFloor != null){
             updateGroundOverlay(currentFloor);

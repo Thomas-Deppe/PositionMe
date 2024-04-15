@@ -422,7 +422,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-//                compassIcon.setRotation((float) Math.toDegrees(sensorFusion.passOrientation()));
                 uiElements.setCompassIconRotation(sensorFusion.passOrientation());
 
                 if (recording_map != null) {
@@ -501,11 +500,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
                 if (recording_map == null){return;}
 
                 float[] GNSS_pos = sensorFusion.getGNSSLatitude(false);
-                // display new point in trajectory and poitnt
-//                updateGNSSTrajectory(new LatLng(GNSS_pos[0] , GNSS_pos[1]));
-//                displayPolylineAsDots(trajectory_gnss.getPoints(), Color.RED, gnssmarker, displayGNSSToggle.isChecked());
-//                gnssTrajectory.updateTrajectory(new LatLng(GNSS_pos[0] , GNSS_pos[1]), false, false);
-//                gnssTrajectory.displayTrajectoryDots(recording_map, getContext(), Color.RED, displayGNSSToggle.isChecked());
                 uiElements.showGNSSTrajectory(GNSS_pos, getContext());
             }
         });
@@ -534,12 +528,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
                 wifiPosition = latlngFromWifiServer;
                 if (recording_map == null){return;}
-
-                // otherwise display the new wifi point
-//                updateWifiTrajectory(latlngFromWifiServer);
-//                displayPolylineAsDots(trajectory_wifi.getPoints(), Color.GREEN, wifiMarker, displayWifiToggle.isChecked());
-//                wifiTrajectory.updateTrajectory(latlngFromWifiServer, false, false);
-//                wifiTrajectory.displayTrajectoryDots(recording_map, getContext(), Color.GREEN, displayWifiToggle.isChecked());
                 uiElements.showWifiTrajectory(latlngFromWifiServer, getContext());
             }
         });
@@ -555,10 +543,8 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
      */
     private void updateFloor(int calcFloor){
         Log.d("SETTING_CURRENT_FLOOR", "Current floor in update "+calcFloor);
-        System.out.println();
         if (currentFloor != calcFloor){
             Log.d("SETTING_CURRENT_FLOOR", "Current floor pass if "+calcFloor+" "+ currentFloor);
-            System.out.println();
             currentFloor = calcFloor;
             if (buildingManager != null){
                 if (!buildingManager.getCurrentBuilding().equals(Buildings.UNSPECIFIED)){

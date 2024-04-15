@@ -48,7 +48,7 @@ public class StartLocationFragment extends Fragment implements Observer{
     private float zoom = 19f;
     //Button to go to next fragment and save the location
     private Button button;
-    //Singleton SesnorFusion class which stores data from all sensors
+    //Singleton SensorFusion class which stores data from all sensors
     private SensorFusion sensorFusion = SensorFusion.getInstance();
     //Google maps LatLong object to pass location to the map
     private LatLng position;
@@ -195,7 +195,6 @@ public class StartLocationFragment extends Fragment implements Observer{
                 // Set the start location obtained
                 sensorFusion.setStartGNSSLatitude(new float[] {(float) startRef[0], (float) startRef[1]});
                 sensorFusion.setStartGNSSLatLngAlt(startRef);
-                //sensorFusion.initialiseFusionAlgorithm(startRef[0], startRef[1], sensorFusion.getElevation());
                 sensorFusion.initialiseFusionAlgorithm();
                 if (currentFloor != null) {
                     sensorFusion.setCurrentFloor(currentFloor);
@@ -208,6 +207,12 @@ public class StartLocationFragment extends Fragment implements Observer{
         });
     }
 
+    /**
+     * Updates the user marker on the map with a new position.
+     * If the activity is not available, the method returns early.
+     *
+     * @param new_position The new position for the marker.
+     */
     private void updateMarker(LatLng new_position) {
         if (getActivity() == null) return;
         getActivity().runOnUiThread(new Runnable() {
@@ -223,6 +228,12 @@ public class StartLocationFragment extends Fragment implements Observer{
         });
     }
 
+    /**
+     * Updates the server response, extracting location information from the given object list.
+     * If the object list or the first element is null, the method returns early.
+     *
+     * @param objList The object list containing server response data.
+     */
     @Override
     public void updateServer(Object[] objList) {
         if (objList == null || objList[0] == null) return;
@@ -249,6 +260,10 @@ public class StartLocationFragment extends Fragment implements Observer{
         this.serverCommunications.unRegisterObserver(this);
     }
 
+    /**
+     * Placeholder method for updating WiFi information.
+     * @param objList The object list containing WiFi information.
+     */
     @Override
     public void updateWifi(Object[] objList) {
         return;

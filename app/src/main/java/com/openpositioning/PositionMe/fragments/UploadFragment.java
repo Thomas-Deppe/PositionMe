@@ -59,7 +59,6 @@ public class UploadFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // Get communication class
-        //serverCommunications = new ServerCommunications(getActivity());
         serverCommunications = ServerCommunications.getMainInstance();
         // Load local trajectories
         localTrajectories = Stream.of(getActivity().getFilesDir().listFiles((file, name) -> name.contains("trajectory_") && name.endsWith(".txt")))
