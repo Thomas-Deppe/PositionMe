@@ -2,6 +2,10 @@ package com.openpositioning.PositionMe.sensors;
 
 import android.util.Log;
 
+/**
+ * This class represents a Turn Detector used for monitoring user movement based on orientation data.
+ * It detects turns and pseudo-turns and provides the corresponding movement type.
+ */
 public class TurnDetector {
     private static final float TURN_THRESHOLD = 1.2f;
     private static final float PSEUDO_TURN = 0.6f;
@@ -41,12 +45,21 @@ public class TurnDetector {
         }
     }
 
-
+    /**
+     * Initializes a new TurnDetector instance.
+     * Sets the initial orientation and user movement type.
+     */
     public TurnDetector() {
         this.orientationPrev = 0;
         this.userMovement = MovementType.STRAIGHT;
     }
 
+    /**
+     * Processes orientation data to detect turns.
+     * Updates the user movement type based on the change in orientation.
+     *
+     * @param orientationUpdate The updated orientation value.
+     */
     public void ProcessOrientationData(float orientationUpdate){
         if (!this.startMonitoring) return;
 
@@ -68,6 +81,13 @@ public class TurnDetector {
         orientationPrev = azimuthInDegrees;
     }
 
+    /**
+     * Processes a detected step event, updating the user movement type.
+     * Resets the user movement type to straight after processing.
+     *
+     * @param orientation The orientation at the time of the step event.
+     * @return The movement type detected for the step.
+     */
     public MovementType onStepDetected(float orientation){
         ProcessOrientationData(orientation);
         MovementType resultForStep = this.userMovement;
@@ -76,10 +96,16 @@ public class TurnDetector {
         return resultForStep;
     }
 
+    /**
+     * Starts monitoring orientation changes.
+     */
     public void startMonitoring(){
         this.startMonitoring = true;
     }
 
+    /**
+     * Stops monitoring orientation changes and resets the user movement type to straight.
+     */
     public void stopMonitoring(){
         this.startMonitoring = false;
         this.userMovement = MovementType.STRAIGHT;

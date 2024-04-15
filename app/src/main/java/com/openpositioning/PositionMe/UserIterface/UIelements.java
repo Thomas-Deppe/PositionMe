@@ -55,20 +55,23 @@ public class UIelements {
     //Zoom of google maps
     private float zoom = 19f;
 
-    //Button to end PDR recording
+    //Buttons
     private Button zoomInButton, zoomOutButton, mapChangeButton, recentreButton, posTagButton;
-
     private ToggleButton showPosError;
     private Switch displayPRDToggle, displayWifiToggle, displayGNSSToggle, displayFusedToggle;
     private Button recordingSettings;
     private Dialog recordingSettingsDialog;
+
     //Recording icon to show user recording is in progress
     private ImageView recIcon;
+
     //Compass icon to show user direction of heading
     private ImageView compassIcon;
     private ImageView noCoverageIcon;
+
     // Elevator icon to show elevator usage
     private ImageView elevatorIcon;
+
     //Text views to display user position and elevation since beginning of recording
     private TextView positionX;
     private TextView positionY;
@@ -84,16 +87,28 @@ public class UIelements {
     //Stores the markers displaying the users location - based on the fusion trajectory
     private Marker user_marker;
 
+    // Stores LatLng of current position
     private LatLng currentPosition;
 
+    // Recording fragment context
     private Context contextRecordFrag;
 
 
-
+    /**
+     * Initializes a new UIelements instance with the given context.
+     *
+     * @param context The context used to initialize the UIelements instance.
+     */
     public UIelements(Context context) {
         this.contextRecordFrag = context;
     }
 
+    /**
+     * Initializes the UI elements when the map is ready.
+     *
+     * @param recording_map   The GoogleMap object.
+     * @param startPosition   The initial position.
+     */
     public void initialiseMapReady(GoogleMap recording_map, LatLng startPosition){
 
         this.recording_map = recording_map;
@@ -118,6 +133,12 @@ public class UIelements {
         recording_map.animateCamera(CameraUpdateFactory.newLatLngZoom(currentPosition, zoom));
     }
 
+    /**
+     * Initializes the UI elements when the view is created.
+     *
+     * @param view     The view associated with the UI elements.
+     * @param activity The activity context.
+     */
     public void initialiseViewCreated(@NonNull View view, Activity activity){
 
         //Initialise UI components
@@ -214,7 +235,6 @@ public class UIelements {
 
         // Display a blinking red dot to show recording is in progress
         blinkingRecording(view);
-
     }
 
 
@@ -439,7 +459,6 @@ public class UIelements {
         alertDialog.setSingleChoiceItems(listItems, checkedItem[0], (dialog, which) -> {
             // set the chosen map type to the global variable
             checkedItem[0] = which;
-            System.out.println("new map" + listItems[checkedItem[0]]);
 
             // call method to update the Map Object
             updateMapType(listItems[checkedItem[0]]);
@@ -485,77 +504,147 @@ public class UIelements {
     }
 
 
+    /**
+     * Adjusts the UI elements when the floor changes.
+     */
     public void adjustUItoFloorChange(){
-        // remove the trajectory from the old floor
+        // Remove the trajectory from the old floor
         pdrTrajectory.adjustTrajectoryToFloor(true);
         wifiTrajectory.adjustTrajectoryToFloor(false);
         gnssTrajectory.adjustTrajectoryToFloor(false);
         fusedTrajectory.adjustTrajectoryToFloor(true);
     }
 
-
+    /**
+     * Displays the distance traveled and position coordinates.
+     *
+     * @param distance   The distance traveled.
+     * @param pdrValues  The PDR values containing position coordinates.
+     */
     public void displayXYDistance(float distance, double[] pdrValues){
         distanceTravelled.setText(contextRecordFrag.getString(R.string.distance_travelled, String.format("%.2f", distance)));
         positionX.setText(contextRecordFrag.getString(R.string.x, String.format("%.1f", pdrValues[0])));
         positionY.setText(contextRecordFrag.getString(R.string.y, String.format("%.1f", pdrValues[1])));
-
     }
 
+    /**
+     * Sets the rotation of the compass icon.
+     *
+     * @param rotation   The rotation angle.
+     */
     public void setCompassIconRotation(float rotation){
         compassIcon.setRotation((float) Math.toDegrees(-rotation));
     }
 
+    /**
+     * Sets the rotation of the user marker.
+     *
+     * @param rotation   The rotation angle.
+     */
     public void setUserMarkerRotation(float rotation){
         user_marker.setRotation((float) Math.toDegrees(rotation));
     }
 
+    /**
+     * Sets the selected floor number in the floor spinner.
+     *
+     * @param newFloor   The new floor number.
+     */
     public void setFloorSpinnerFloorNumber(int newFloor){
         floorSpinner.setSelection(newFloor);
     }
 
+    /**
+     * Updates the current position of the user marker.
+     *
+     * @param newPosition   The new position coordinates.
+     */
     public void updateCurrentPosition(LatLng newPosition){
         currentPosition = newPosition;
         user_marker.setPosition(newPosition);
     }
 
+    /**
+     * Sets the name of the current building.
+     *
+     * @param newBuildingName   The name of the new building.
+     */
     public void setCurrentBuilding(String newBuildingName) {
         currentBuilding.setText(newBuildingName);
     }
 
+    /**
+     * Displays the elevator icon and elevation value.
+     *
+     * @param elevator       True if elevator is being used, false otherwise.
+     * @param elevationVal   The elevation value.
+     */
     public void displayElevatorIcon(boolean elevator, float elevationVal){
         elevation.setText(contextRecordFrag.getString(R.string.elevation, String.format("%.1f", elevationVal)));
         if(elevator) elevatorIcon.setVisibility(View.VISIBLE);
         else elevatorIcon.setVisibility(View.GONE);
     }
 
+    /**
+     * Gets the showPosError ToggleButton.
+     *
+     * @return The showPosError ToggleButton.
+     */
     public ToggleButton getShowPosError(){
         return showPosError;
     }
 
+    /**
+     * Gets the noCoverageIcon ImageView.
+     *
+     * @return The noCoverageIcon ImageView.
+     */
     public ImageView getNoCoverageIcon(){
         return noCoverageIcon;
     }
 
+    /**
+     * Displays the WiFi trajectory.
+     *
+     * @param latlngFromWifiServer   The WiFi server position coordinates.
+     * @param context                The context.
+     */
     public void showWifiTrajectory(LatLng latlngFromWifiServer, Context context){
         wifiTrajectory.updateTrajectory(latlngFromWifiServer, false, false);
         wifiTrajectory.displayTrajectoryDots(recording_map, context, Color.GREEN, displayWifiToggle.isChecked());
     }
 
+    /**
+     * Displays the PDR trajectory.
+     *
+     * @param pdrPosition   The PDR position coordinates.
+     * @param context       The context.
+     */
     public void showPDRTrajectory(LatLng pdrPosition, Context context){
         pdrTrajectory.updateTrajectory(pdrPosition, displayPRDToggle.isChecked(), false);
         pdrTrajectory.displayTrajectoryDots(recording_map, context, Color.BLUE, displayPRDToggle.isChecked());
     }
 
+    /**
+     * Displays the GNSS trajectory.
+     *
+     * @param GNSS_pos   The GNSS position coordinates.
+     * @param context    The context.
+     */
     public void showGNSSTrajectory(float[] GNSS_pos, Context context){
         gnssTrajectory.updateTrajectory(new LatLng(GNSS_pos[0] , GNSS_pos[1]), false, false);
         gnssTrajectory.displayTrajectoryDots(recording_map, context, Color.RED, displayGNSSToggle.isChecked());
     }
 
+    /**
+     * Displays the fused trajectory.
+     *
+     * @param newCoordinate   The new fused position coordinates.
+     * @param context         The context.
+     */
     public void showFusedTrajectory(LatLng newCoordinate, Context context){
         fusedTrajectory.updateTrajectory(newCoordinate, displayFusedToggle.isChecked(), true);
         fusedTrajectory.displayTrajectoryDots(recording_map, context, Color.CYAN, displayFusedToggle.isChecked());
     }
-
-
 
 }

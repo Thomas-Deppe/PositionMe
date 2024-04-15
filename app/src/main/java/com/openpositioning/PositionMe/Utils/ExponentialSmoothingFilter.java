@@ -1,7 +1,17 @@
 package com.openpositioning.PositionMe.Utils;
 
 import java.util.Arrays;
-
+/**
+ * A class implementing an Exponential Smoothing Filter.
+ *
+ * This filter is used to smooth a sequence of values using exponential smoothing.
+ * It calculates a weighted average of current and past values, with the weight of each value determined by a smoothing factor alpha.
+ * A higher alpha value discounts older observations faster, giving more weight to recent observations.
+ *
+ * Smoothing is applied independently to each value in the sequence.
+ *
+ * @author Thomas Deppe
+ */
 public class ExponentialSmoothingFilter {
 
     private final double alpha; // Smoothing factor between 0 and 1

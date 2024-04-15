@@ -39,6 +39,14 @@ public class TrajectoryDisplay {
     private int numberOfMarkersDisplayed = 7;
 
 
+    /**
+     * Represents a Trajectory Display on a Google Map.
+     * It displays a polyline trajectory and markers along the trajectory.
+     *
+     * @param color          The color of the polyline.
+     * @param recording_map  The Google Map instance to display the trajectory on.
+     * @param start_position The starting position of the trajectory.
+     */
     public TrajectoryDisplay(int color, GoogleMap recording_map, LatLng start_position) {
 
         if (recording_map == null){return;}
@@ -53,16 +61,34 @@ public class TrajectoryDisplay {
         markersList = new ArrayList<>();
     }
 
+    /**
+     * Sets the visibility of the polyline trajectory.
+     *
+     * @param visible True to make the trajectory visible, false otherwise.
+     */
     public void setVisibility(boolean visible){
         trajectory.setVisible(visible);
     }
 
+    /**
+     * Sets the visibility of the markers along the trajectory.
+     *
+     * @param display True to display the markers, false to hide them.
+     */
     public void displayLastKDots(boolean display) {
 
         for (Marker marker : markersList) {
             marker.setVisible(display);
         }
     }
+
+    /**
+     * Updates the trajectory with a new point and adjusts its visibility.
+     *
+     * @param point      The new point to add to the trajectory.
+     * @param showLine   True to show the trajectory line, false to hide it.
+     * @param smoothing  True to apply smoothing to the trajectory, false otherwise.
+     */
 
     public void updateTrajectory (LatLng point, boolean showLine, boolean smoothing){
 
@@ -91,6 +117,11 @@ public class TrajectoryDisplay {
         trajectory.setVisible(showLine);
     }
 
+    /**
+     * Adjusts the trajectory to match the floor level and updates its visibility.
+     *
+     * @param showLine True to show the trajectory line, false to hide it.
+     */
     public void adjustTrajectoryToFloor(boolean showLine) {
 
         // hide the polylines
@@ -103,7 +134,13 @@ public class TrajectoryDisplay {
         trajectory.setVisible(true);
     }
 
-    // Simple smoothing for trajectory, returns a list of interpolated points between two points
+    /**
+     * Interpolates points between two given points to smooth the trajectory.
+     *
+     * @param lastPoint The last point of the trajectory.
+     * @param newPoint  The new point to be added to the trajectory.
+     * @return A list of interpolated points between the last point and the new point.
+     */
     private List<LatLng> interpolate_points(LatLng lastPoint, LatLng newPoint) {
         List<LatLng> interpolatedPoints = new ArrayList<>();
 
@@ -128,6 +165,14 @@ public class TrajectoryDisplay {
         return interpolatedPoints;
     }
 
+    /**
+     * Displays trajectory dots (markers) on the map.
+     *
+     * @param recording_map   The Google Map instance to display the markers on.
+     * @param context         The application context.
+     * @param dotColor        The color of the dots.
+     * @param enabledDisplay  True to display the markers, false to hide them.
+     */
     public void displayTrajectoryDots(GoogleMap recording_map, Context context, int dotColor, boolean enabledDisplay) {
 
         List<LatLng> points = trajectory.getPoints();
