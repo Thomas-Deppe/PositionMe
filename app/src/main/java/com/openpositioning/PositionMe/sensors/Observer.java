@@ -8,6 +8,9 @@ package com.openpositioning.PositionMe.sensors;
  *
  * @author Virginia Cangelosi
  * @author Mate Stodulka
+ * @author Alexandra Geciova
+ * @author Thomas Deppe
+ * @author Christopher Khoo
  */
 public interface Observer {
 
@@ -18,5 +21,12 @@ public interface Observer {
      * @param objList   an array of objects that were updated in the <code>Observable</code>
      */
     public void updateServer(Object[] objList);
+
+    /**
+     * Updates from the class implementing the {@link Observable} interface, where this instance is
+     * registered as an observer.
+     *
+     * @param objList   an array of objects that were updated in the <code>Observable</code>
+     */
     public void updateWifi(Object[] objList);
 }

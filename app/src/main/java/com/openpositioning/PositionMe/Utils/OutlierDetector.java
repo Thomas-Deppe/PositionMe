@@ -7,7 +7,11 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Utility class for detecting outliers in a list of distances.
+ * Utility class for detecting outliers in a list of distances by employing the modified Z score.
+ *
+ * @author Thomas Deppe
+ * @author Alexandra Geciova
+ * @author Christopher Khoo
  */
 public class OutlierDetector {
     // Threshold for outlier detection
@@ -36,7 +40,6 @@ public class OutlierDetector {
         distances.add(newDistance);
 
         if (newDistance > max_distance_threshold) {
-            Log.d("EKF", "Outlier detected: "+newDistance);
             return true;
         }
 
@@ -45,14 +48,12 @@ public class OutlierDetector {
 
         // Calculate the Median Absolute Deviation (MAD)
         double mad = calculateMAD(median);
-        Log.d("DETECT_OUTLIERS", "Median = " + median + " MAD = " + mad);
 
         // Calculate the modified Z-score
         double modifiedZScore = Z_SCORE_FACTOR * ((Math.abs(newDistance - median)) / mad);
 
         // Check if the modified Z-score exceeds the outlier threshold
         if (modifiedZScore > OUTLIER_THRESHOLD) {
-            Log.d("EKF", "Outlier detected: " + newDistance);
             // Remove the outlier from the list
             int index = distances.indexOf(newDistance);
             distances.remove(index);

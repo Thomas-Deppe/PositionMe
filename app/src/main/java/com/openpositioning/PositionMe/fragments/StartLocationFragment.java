@@ -40,6 +40,7 @@ import org.json.JSONObject;
  * @see SensorFusion the class containing sensors and recording.
  *
  * @author Virginia Cangelosi
+ * @author Christopher Khoo
  */
 public class StartLocationFragment extends Fragment implements Observer{
 
@@ -215,11 +216,10 @@ public class StartLocationFragment extends Fragment implements Observer{
      */
     private void updateMarker(LatLng new_position) {
         if (getActivity() == null) return;
-        getActivity().runOnUiThread(new Runnable() {
+        requireActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 if (start_map != null && user_marker != null) {
-                    Log.d("MARKER WIFI LOCATION", new_position.latitude + " " + new_position);
                     LatLng new_position = new LatLng(startRef[0], startRef[1]);
                     user_marker.setPosition(new_position);
                     start_map.animateCamera(CameraUpdateFactory.newLatLngZoom(new_position, zoom));
@@ -261,11 +261,9 @@ public class StartLocationFragment extends Fragment implements Observer{
     }
 
     /**
-     * Placeholder method for updating WiFi information.
+     * Placeholder method for updating WiFi information. As it is not needed by this class.
      * @param objList The object list containing WiFi information.
      */
     @Override
-    public void updateWifi(Object[] objList) {
-        return;
-    }
+    public void updateWifi(Object[] objList) { }
 }

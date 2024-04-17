@@ -536,8 +536,7 @@ public class MainActivity extends AppCompatActivity implements Observer {
         this.serverCommunications.registerObserver(this);
         this.sensorFusion = SensorFusion.getInstance();
         this.sensorFusion.setContext(getApplicationContext());
-        WindowManager windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
-        this.sensorFusion.setCurrentWindowManager(windowManager);
+        this.sensorFusion.setCurrentWindowManager((WindowManager) getSystemService(Context.WINDOW_SERVICE));
         //sensorFusion.registerForServerUpdate(this);
     }
 

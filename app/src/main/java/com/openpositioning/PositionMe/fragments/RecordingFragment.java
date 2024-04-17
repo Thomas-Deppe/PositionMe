@@ -27,7 +27,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.openpositioning.PositionMe.Buildings.BuildingManager;
 import com.openpositioning.PositionMe.Buildings.Buildings;
-import com.openpositioning.PositionMe.UserIterface.UIelements;
+import com.openpositioning.PositionMe.UserInterface.UIelements;
 import com.openpositioning.PositionMe.Utils.CoordinateTransform;
 import com.openpositioning.PositionMe.Buildings.Floors;
 import com.openpositioning.PositionMe.R;
@@ -35,11 +35,12 @@ import com.openpositioning.PositionMe.SensorFusionUpdates;
 import com.openpositioning.PositionMe.Utils.ExponentialSmoothingFilter;
 import com.openpositioning.PositionMe.sensors.SensorFusion;
 
-
 /**
  * A simple {@link Fragment} subclass. The recording fragment is displayed while the app is actively
  * saving data, with some UI elements indicating current PDR status. The users path is plotted on the map and a floor plan is displayed on this map if the user enters
- * a supported building.
+ * a supported building. The UI elements are managed by two separate classes for modularity.
+ * This class coordinates with the building manger to display the floor plans.
+ * All communication happens asynchronously.
  *
  * @see HomeFragment the previous fragment in the nav graph.
  * @see CorrectionFragment the next fragment in the nav graph.
@@ -47,6 +48,7 @@ import com.openpositioning.PositionMe.sensors.SensorFusion;
  *
  * @author Thomas Deppe
  * @author Alexandra Geciova
+ * @author Christopher Khoo
  */
 public class RecordingFragment extends Fragment implements SensorFusionUpdates{
 
@@ -144,9 +146,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             startPosition = sensorFusion.getGNSSLatLngAlt(true);
             ecefRefCoords = sensorFusion.getEcefRefCoords();
 
-            // write to data collection in sensor fusion
-            sensorFusion.startLocationWriteTextFile(startPosition);
-
             //ecefRefCoords = CoordinateTransform.geodeticToEcef(startPosition[0],startPosition[1], startPosition[2]);
             LatLng position = new LatLng(startPosition[0], startPosition[1]);
             currentPosition = position;
@@ -161,7 +160,6 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
             checkBuildingBounds(currentPosition);
 
             int calcFloor = sensorFusion.getCurrentFloor();
-            Log.d("SETTING_CURRENT_FLOOR", "ON MAP READY: received starting floor "+calcFloor);
             updateFloor(calcFloor);
         }
     };
@@ -640,6 +638,12 @@ public class RecordingFragment extends Fragment implements SensorFusionUpdates{
         super.onDestroy();
     }
 
+    /**
+     * Updates the floor to the floor selected by the user.
+     *
+     * @param selectedFloor The floor selected by the user
+     * @param position The position in the spinner array
+     */
     public void spinnerUpdateFloor (String selectedFloor, int position){
 
         //Update the displayed floor plan
