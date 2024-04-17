@@ -1,6 +1,12 @@
 # PositionMe
 Indoor poistioning data collection application created for the University of Edinburgh's Embedded Wireless course. 
 
+## Assignment 2
+Here is our entire repository and code for assignment 2. We have included an extra trajectory in the video which makes
+our video slightly longer than 20 minutes. If marking is strict and we will be penalised for going past the time 
+please ignore the last 2 minutes of the video. We felt that the extra trajectory really highlighted some of our apps
+successes and so included it as an appendix of sorts. Thank you for your understanding. 
+
 ## Requirements
 
 - Android Studio 4.2 or later
@@ -30,3 +36,6 @@ Indoor poistioning data collection application created for the University of Edi
 
 ### New contributors
 - Francisco Zampella (fzampella-huawei)
+- Thomas Deppe
+- Christopher Khoo
+- Alexandra Geciova

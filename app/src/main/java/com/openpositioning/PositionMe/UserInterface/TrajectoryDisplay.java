@@ -1,4 +1,4 @@
-package com.openpositioning.PositionMe.UserIterface;
+package com.openpositioning.PositionMe.UserInterface;
 
 import android.content.Context;
 
@@ -18,7 +18,7 @@ import java.util.List;
  * The TrajectoryDisplay class defines objects that represent a trajecotry plotted on the map.
  * It stores it formatting settings, data points and sets the desired display.
  *
- * The class is instantited in {@link UIelements} for each of the trajectories plotted: PDR, WIFI, GNSS, Fusion
+ * The class is instantiated in {@link UIelements} for each of the trajectories plotted: PDR, WIFI, GNSS, Fusion
  * As Attributes, the class stores
  * - the Polyline object with all the position points
  * - an Array of last K marker (objects)
@@ -28,8 +28,8 @@ import java.util.List;
  * The class includes a smoothing function that is used for plotting the polyline.
  *
  * @author Alexandra Geciova
- * @author Tom
- * @author Chris
+ * @author Thomas Deppe
+ * @author Christopher Khoo
  */
 public class TrajectoryDisplay {
 

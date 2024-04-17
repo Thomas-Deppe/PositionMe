@@ -46,8 +46,9 @@ import okhttp3.ResponseBody;
  *
  * Keys and URLs are hardcoded strings, given the simple and academic nature of the project.
  *
- * @author Michal Dvorak
- * @author Mate Stodulka
+ * @author Alexandra Geciova
+ * @author Thomas Deppe
+ * @author Christopher Khoo
  */
 public class ServerCommunications implements Observable {
 
@@ -66,7 +67,7 @@ public class ServerCommunications implements Observable {
     private boolean success;
     private List<Observer> observers;
 
-    private JSONObject wifiresponse;
+    private JSONObject wifiResponse;
 
 
     // Static constants necessary for communications
@@ -81,9 +82,8 @@ public class ServerCommunications implements Observable {
     private static final String infoRequestURL =
             "https://openpositioning.org/api/live/users/trajectories/" + userKey
                     + "?key=" + masterKey;
-    private static final String uploadWifiURL = "https://openpositioning.org/api/position/fine";
-            //+ userKey
-            //        + "/?key=" + masterKey; //?skip=0&limit=30&
+    private static final String fingerprintURL = "https://openpositioning.org/api/position/fine";
+
     private static final String PROTOCOL_CONTENT_TYPE = "multipart/form-data";
     private static final String PROTOCOL_CONTENT_TYPE_FINGERPRINT = "application/json";
     private static final String PROTOCOL_ACCEPT_TYPE = "application/json";
@@ -128,11 +128,10 @@ public class ServerCommunications implements Observable {
     }
 
     /**
-     * Outgoing communication request with a {@link Traj trajectory} object. The recorded
-     * trajectory is passed to the method. It is processed into the right format for sending
-     * to the API server.
+     * Outgoing communication request with a JSON fingerprint the server will resolve this fingerprint
+     * into a coordinate that is used by the fusion algorithm.
      *
-     * @param fingerprint
+     * @param fingerprint The JSON fingerprint for the server to resolve
      */
     public void sendWifi(JSONObject fingerprint){
 
@@ -142,12 +141,8 @@ public class ServerCommunications implements Observable {
         // Check connections available before sending data
         checkNetworkStatus();
 
-        // Check if user preference allows for syncing with mobile data
-        // TODO: add sync delay and enforce settings
-        boolean enableMobileData = this.settings.getBoolean("mobile_sync", false);
-
-        // Check if device is connected to WiFi or to mobile data with enabled preference
-        if(this.isWifiConn || (enableMobileData && isMobileConn)) {
+        // Check if device is connected to WiFi
+        if(this.isWifiConn) {
             // Instantiate client for HTTP requests
             OkHttpClient client = new OkHttpClient();
 
@@ -156,7 +151,7 @@ public class ServerCommunications implements Observable {
 
             // Create a POST request with the required headers
             okhttp3.Request request = new okhttp3.Request.Builder()
-                    .url(uploadWifiURL)
+                    .url(fingerprintURL)
                     .post(body)
                     .addHeader("accept", PROTOCOL_ACCEPT_TYPE)
                     .addHeader("Content-Type", PROTOCOL_CONTENT_TYPE_FINGERPRINT).build();
@@ -169,7 +164,7 @@ public class ServerCommunications implements Observable {
                     e.printStackTrace();
                     System.err.println("Failure to get response");
                     success = false;
-                    wifiresponse = null;
+                    wifiResponse = null;
                     notifyObservers(2);
                 }
 
@@ -181,7 +176,7 @@ public class ServerCommunications implements Observable {
                         if (!response.isSuccessful()) {
                             System.err.println("POST error response: " + responseBody.string());
                             success = false;
-                            wifiresponse = null;
+                            wifiResponse = null;
                             notifyObservers(2);
                             return;
                         }
@@ -198,7 +193,7 @@ public class ServerCommunications implements Observable {
                         System.out.println("Successful post response: " + response_string);
 
                         // assign the response to a global variable
-                        wifiresponse = new JSONObject(response_string);
+                        wifiResponse = new JSONObject(response_string);
                         notifyObservers(2);
 
                     } catch (JSONException e) {
@@ -212,7 +207,7 @@ public class ServerCommunications implements Observable {
             // and notify observers and user
             System.err.println("No internet connection, No request allowed right now!");
             success = false;
-            wifiresponse = null;
+            wifiResponse = null;
             notifyObservers(2);
         }
 
@@ -556,7 +551,7 @@ public class ServerCommunications implements Observable {
      * @param index Index for identifying the observer to be notified.
      */
     @Override
-    public void notifyObservers(int index) {
+    public synchronized void notifyObservers(int index) {
         if (observers == null) return;
 
         for(Observer o : observers) {
@@ -567,7 +562,7 @@ public class ServerCommunications implements Observable {
                 o.updateServer(new Boolean[] {success});
             }
             else if (index == 2 && (o instanceof SensorFusion || o instanceof StartLocationFragment)) {
-                o.updateServer(new Object[] {wifiresponse});
+                o.updateServer(new Object[] {wifiResponse});
             }
         }
     }

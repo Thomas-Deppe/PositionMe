@@ -5,14 +5,24 @@ import android.util.Log;
 /**
  * This class represents a Turn Detector used for monitoring user movement based on orientation data.
  * It detects turns and pseudo-turns and provides the corresponding movement type.
+ *
+ * @author Thomas Deppe
+ * @author Alexandra Geciova
+ * @author Christopher Khoo
  */
 public class TurnDetector {
+    //Threshold to be classed as turn
     private static final float TURN_THRESHOLD = 1.2f;
+    //Threshold for small orientation changes that are not indicative of a turn or straight
     private static final float PSEUDO_TURN = 0.6f;
+    //The previous value
     private float orientationPrev;
+    //Whether to start monitoring, to stop unnecessary computations
     private boolean startMonitoring;
+    //The users movement
     private MovementType userMovement;
 
+    // A enum storing the users movement type
     public enum MovementType {
         STRAIGHT,
         PSEUDO_TURN,

@@ -1,4 +1,4 @@
-package com.openpositioning.PositionMe.UserIterface;
+package com.openpositioning.PositionMe.UserInterface;
 
 import android.app.Activity;
 import android.app.Dialog;
@@ -37,15 +37,15 @@ import com.openpositioning.PositionMe.fragments.RecordingFragment;
 import com.openpositioning.PositionMe.sensors.SensorFusion;
 
 /**
- * The UIelements class instanties and modifies all the UI elements shown for the {@link RecordingFragment}
+ * The UIelements class instantiates and modifies all the UI elements shown for the {@link RecordingFragment}
  *
  * The class instantiates objects for UI elements such as  buttons, ToggleButtons, Text Views, Image Views and Markers.
  * The class provides a number of button and togglebutton listeners and display methods that are called on
  * the instantiated UIelements object from the {@link RecordingFragment} class
  *
  * @author Alexandra Geciova
- * @author Tom
- * @author Chris
+ * @author Thomas Deppe
+ * @author Christopher Khoo
  */
 public class UIelements {
 
@@ -202,7 +202,7 @@ public class UIelements {
             @Override
             public void onClick(View view) {
                 if (currentPosition != null) {
-                    SensorFusion.getInstance().addTagFusionTraj(currentPosition);
+                    SensorFusion.getInstance().addTagFusionTrajectory(currentPosition);
                 }
             }
         });
@@ -239,51 +239,68 @@ public class UIelements {
 
 
     /**
-     * A helper method to set up the floor spinner that allows the user to select floors. This method is called when the user changes building
-     * to ensure that this spinner reflects teh available floor plans of the building. It sets an OnItemSelectedListener to monitor if the user selects a new floor.
+     * Sets up the floor spinner widget for selecting floors based on the current building.
+     * This method initializes the spinner and configures its adapter based on the floors available in the specified building.
+     * It also handles visibility changes of the spinner and its title based on the building specified.
+     *
+     * @param currentBuilding The building whose floors are to be displayed in the spinner.
+     * @param currentFloor The currently selected floor, used to set the default selection in the spinner.
+     * @param recordingFragment The fragment that contains callbacks related to spinner selection changes.
      */
     public void setupFloorSpinner(Buildings currentBuilding, int currentFloor, RecordingFragment recordingFragment) {
 
+        // Initialize the ArrayAdapter that will hold the data for the spinner
         ArrayAdapter<CharSequence> floorAdapter;
+
+        // Check if the current building is specified or not
         if (currentBuilding.equals(Buildings.UNSPECIFIED)){
+            // If no building is specified, set the adapter to null (no floors to display)
             floorAdapter = null;
         } else {
+            // If a building is specified, create an ArrayAdapter for the spinner
             floorAdapter = ArrayAdapter.createFromResource(contextRecordFrag,
                     currentBuilding.getFloorsArray(),
                     android.R.layout.simple_spinner_item);
+            // Specify the layout for dropdown items
             floorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         }
 
+        // Check if the floor adapter is not null
         if (floorAdapter != null){
+            // Set the adapter for the spinner
             this.floorSpinner.setAdapter(floorAdapter);
+            // Set the current floor as the selected item in the spinner
             this.floorSpinner.setSelection(currentBuilding.convertFloorToSpinnerIndex(currentFloor));
+            // Make the floor title and spinner visible
             this.floor_title.setVisibility(View.VISIBLE);
             this.floorSpinner.setVisibility(View.VISIBLE);
         } else {
+            // If the adapter is null, hide the floor title and spinner
             this.floor_title.setVisibility(View.GONE);
             this.floorSpinner.setVisibility(View.GONE);
         }
 
-
-        // Set a listener to handle Spinner item selection
+        // Set a new listener for the spinner item selections
         this.floorSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                // Handle item selection
+                // This method is called when a new item is selected in the spinner
 
+                // Retrieve the selected floor as a string
                 String selectedFloor = parent.getItemAtPosition(position).toString();
 
-                //Update the displayed floor plan
+                // Call the method in the recordingFragment to update the floor plan based on the selected floor and its position
                 recordingFragment.spinnerUpdateFloor(selectedFloor, position);
-
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
-                // Do nothing
+                // This method is called when the selection disappears from this view
+                // Do nothing as there's no action required here
             }
         });
     }
+
 
     /**
      * A helper method, used to create a recording bottom sheet dialog. This will be displayed at the bottom of the screen when the user presses the settings button.
@@ -405,13 +422,31 @@ public class UIelements {
         recIcon.startAnimation(blinking_rec);
     }
 
+    /**
+     * Updates the display of position errors for different localization systems in the UI.
+     * This method updates the text views dedicated to displaying the position error for PDR, Wi-Fi, and GNSS.
+     *
+     * @param positionError An array of floats representing the position errors for PDR, Wi-Fi, and GNSS respectively.
+     */
     public void updatePositionError(float[] positionError){
 
-        if (contextRecordFrag == null){return;}
+        // Check if the contextRecordFrag is null, and return immediately if it is.
+        // This check is essential to avoid NullPointerException if the context is not properly set.
+        if (contextRecordFrag == null){
+            return;
+        }
 
-        errorWifi.setText(contextRecordFrag.getString(R.string.meter, String.format("%.2f", positionError[0])));
-        errorGNSS.setText(contextRecordFrag.getString(R.string.meter, String.format("%.2f", positionError[1])));
-        errorPDR.setText(contextRecordFrag.getString(R.string.meter, String.format("%.2f",  positionError[2])));
+        // Set the text of the PDR error TextView. Format the error to two decimal places and append "m" to denote meters.
+        // PDR (Pedestrian Dead Reckoning) error is updated from the first element of the positionError array.
+        errorPDR.setText(contextRecordFrag.getString(R.string.meter, String.format("%.2f", positionError[0])));
+
+        // Set the text of the Wi-Fi error TextView. Similarly, format the error to two decimal places and append "m".
+        // Wi-Fi error is updated from the second element of the positionError array.
+        errorWifi.setText(contextRecordFrag.getString(R.string.meter, String.format("%.2f", positionError[1])));
+
+        // Set the text of the GNSS error TextView. Format the error as done for the others and append "m".
+        // GNSS (Global Navigation Satellite System) error is updated from the third element of the positionError array.
+        errorGNSS.setText(contextRecordFrag.getString(R.string.meter, String.format("%.2f", positionError[2])));
     }
 
     /**
@@ -443,6 +478,8 @@ public class UIelements {
     /**
      * Defines an Alert Dialog Object for change of the Map Type
      * Redirects to changeMapType() method to update the Map Object
+     *
+     * @param activity The activity to attach the alert to
      */
     public void MapTypeAlertDialog(Activity activity){
 
@@ -488,7 +525,6 @@ public class UIelements {
     /**
      * decreases the zoom and updates the Animate Camera to zoom out of the map
      **/
-    // todo set currentPosition for sure latlng
     public void setZoomOutButton(){
         zoom--;
         if (!(recording_map == null)) {
@@ -505,7 +541,7 @@ public class UIelements {
 
 
     /**
-     * Adjusts the UI elements when the floor changes.
+     * Adjusts the UI elements when the floor changes. Clearing and resetting the trajectories.
      */
     public void adjustUItoFloorChange(){
         // Remove the trajectory from the old floor

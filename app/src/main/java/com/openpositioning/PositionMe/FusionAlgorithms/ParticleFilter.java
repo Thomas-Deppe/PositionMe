@@ -11,6 +11,8 @@ import java.util.Random;
 
 /**
  * Particle filter algorithm for estimating position based on sensor measurements.
+ *
+ * @author Christopher Khoo
  */
 public class ParticleFilter {
     // Constants, may need to be tuned

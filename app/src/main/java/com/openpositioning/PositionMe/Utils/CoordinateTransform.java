@@ -6,7 +6,10 @@ import com.google.android.gms.maps.model.LatLng;
 
 /**
  * A utility class used to convert the PDR coordinates which are relative East North Up (ENU) on a tangent plane to the earths surface to
- * WSG84 coordinates that google maps uses. This allows the relative coordinates to be accurately transformed into longitude and latitude coordinates used by google maps.
+ * WSG84 coordinates that google maps uses. This allows the relative coordinates to be accurately transformed into longitude and latitude
+ * coordinates used by google maps. Largely adapted from the pymap3D library.
+ *
+ * @author Thomas Deppe
  */
 public final class CoordinateTransform {
 

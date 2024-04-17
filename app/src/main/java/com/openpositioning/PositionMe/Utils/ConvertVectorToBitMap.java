@@ -13,6 +13,8 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 
 /**
  * Utility class to convert vector drawable to bitmap for use as marker icon on Google Maps.
+ *
+ * @author Alexandra Geciova
  */
 public final class ConvertVectorToBitMap {
 

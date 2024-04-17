@@ -8,7 +8,11 @@ import org.json.JSONObject;
 import java.util.List;
 
 /**
- * Utility class for converting WiFi data to JSON format.
+ * Utility class for converting WiFi fingerprint data to JSON format that the server expects
+ *
+ * @author Thomas Deppe
+ * @author Alexandra Geciova
+ * @author Christopher Khoo
  */
 public final class JsonConverter {
 
